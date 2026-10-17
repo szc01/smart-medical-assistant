@@ -1,0 +1,53 @@
+# 本地开发依赖一键启动（MySQL + PostgreSQL）
+#
+# 用法：
+#   docker compose up -d
+#   然后按 README「Docker 方式」一节填写 backend/.env（注意端口是 3307 / 5433）
+#
+# 端口特意避开本机默认的 3306 / 5432，避免与已安装的数据库冲突。
+# 如果你的机器上没有本地数据库，可以把映射改回 3306:3306 / 5432:5432。
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: sma-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: dev_password
+      MYSQL_DATABASE: medical_assistant
+      TZ: Asia/Shanghai
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/sql/init_mysql.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pdev_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  postgres:
+    image: postgres:16
+    container_name: sma-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_DB: smart_session
+      TZ: Asia/Shanghai
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./backend/sql/init_postgres_docker.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql_data:
+  pg_data:
