@@ -99,18 +99,16 @@ async def create_conversation(
 # 获取会话列表接口
 @router.get("/list")
 async def list_conversations(
-    # 用户 ID（从查询参数获取）
-    user_id: int,
     # 当前登录用户（依赖注入，用于权限验证）
     current_user: User = Depends(get_current_user),
     # PostgreSQL 数据库会话（依赖注入）
     db: Session = Depends(get_postgres_db)
 ):
-    """获取用户的会话列表"""
+    """获取当前登录用户的会话列表"""
     try:
-        # 从数据库查询该用户的所有会话，按最后活跃时间降序排列
+        # 只查询当前登录用户的会话，忽略客户端传入的 user_id，按最后活跃时间降序排列
         conversations = db.query(Conversation).filter(
-            Conversation.user_id == user_id
+            Conversation.user_id == current_user.id
         ).order_by(Conversation.last_active.desc()).all()
         
         # 初始化结果列表
@@ -156,9 +154,10 @@ async def get_conversation(
 ):
     """获取会话详情和消息列表（从LangGraph短记忆中读取）"""
     try:
-        # 从数据库查询会话记录
+        # 从数据库查询会话记录，且必须属于当前登录用户
         conversation = db.query(Conversation).filter(
-            Conversation.id == conversation_id
+            Conversation.id == conversation_id,
+            Conversation.user_id == current_user.id
         ).first()
         
         # 如果会话不存在
@@ -257,9 +256,10 @@ async def delete_conversation(
 ):
     """删除会话（MySQL会话记录 + LangGraph短记忆checkpoints）"""
     try:
-        # 从数据库查询会话记录
+        # 从数据库查询会话记录，且必须属于当前登录用户
         conversation = db.query(Conversation).filter(
-            Conversation.id == conversation_id
+            Conversation.id == conversation_id,
+            Conversation.user_id == current_user.id
         ).first()
         
         # 如果会话不存在

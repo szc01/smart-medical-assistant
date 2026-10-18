@@ -74,7 +74,7 @@ POST /chat/send
 
 ## 技术栈
 
-**后端**：Python 3.12 · FastAPI · LangGraph 1.0 · LangChain 1.0 · SQLAlchemy 2.0 · PostgreSQL（记忆/会话）· MySQL（用户）· Pydantic 2 · python-jose + bcrypt
+**后端**：Python 3.12 · FastAPI · LangGraph 1.0 · LangChain 1.0 · SQLAlchemy 2.0 · PostgreSQL（长期记忆 / 会话 / 医疗文档）· MySQL（用户账号）· Pydantic 2 · python-jose + bcrypt
 **前端**：Vue 3.5（Composition API）· TypeScript · Vite 6 · Element Plus · Pinia · Vue Router 4 · Axios · marked
 **模型与外部服务**：阿里云百炼（DashScope，OpenAI 兼容端点，默认 `qwen3.5-plus`）· Tavily 联网检索 · LangSmith 追踪（可选）
 
@@ -92,7 +92,7 @@ smart-medical-assistant/
 │   │   ├── api/               # auth / chat / conversations / medical_upload / preferences
 │   │   ├── config/            # 环境变量加载
 │   │   ├── database/          # MySQL / PostgreSQL 引擎与会话
-│   │   ├── models/            # users / conversations / medical_documents
+│   │   ├── models/            # users（MySQL）/ conversations、medical_documents（PostgreSQL）
 │   │   ├── rag/               # PDF 解析 + 结构化信息提取
 │   │   └── schemas/           # 请求 / 响应模型
 │   ├── sql/                   # MySQL / PostgreSQL 初始化脚本
@@ -269,6 +269,7 @@ curl -X POST http://localhost:8000/auth/token \
 ## 安全说明
 
 - 仓库内**不含**任何真实密钥、生产数据库地址或用户数据，`backend/.env`、`backend/uploads/*` 均已被 `.gitignore` 忽略。
+- 用户数据接口（偏好、文档、会话、聊天）一律以 JWT 登录态为准；请求中的 `user_id` 与登录用户不一致时返回 403，会话不属于当前用户时返回 403 或 404。
 - 自行部署到公网前请务必：替换 `SECRET_KEY` 为随机串、把 CORS 的 `allow_origins=["*"]` 收窄到前端域名、不要让数据库端口对公网开放、为上传目录设置大小与类型校验。
 - 上传的医疗文档含个人隐私，生产环境应加密存储并设置访问控制与保留期限。
 

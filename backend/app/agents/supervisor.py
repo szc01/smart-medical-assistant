@@ -31,19 +31,21 @@ ROUTE_PROMPT = """
 - pharmacist: 药品咨询、用药指导、药物副作用、药品替代
 
 【决策规则】
-1. 用户说上传了文档/病历/报告 -> medical_examiner（体检员会读取文档信息）
-2. 新用户首次对话或基本信息不全 -> medical_examiner
-3. 用户描述症状但还没收集完整信息 -> medical_examiner
-4. 【重要】如果体检员已经回复“将为您转接主治医生”或已生成健康摘要，说明信息收集完成 -> attending_doctor
-5. 用户信息充足（有姓名、年龄、症状、病史），需要诊断治疗 -> attending_doctor
-6. 医生已给出诊断和处方，需要用药指导 -> pharmacist
-7. 明确问药品相关问题 -> pharmacist
-8. 简单问候/闲聊/不确定需求 -> supervisor
-9. 子智能体已完成处理，对话可以结束 -> supervisor
+1. 用户询问已上传报告/病历/化验单中的具体数值或结论（如血糖、血红蛋白、ALT） -> attending_doctor（主治医生会检索报告原文并标注页码）
+2. 用户刚上传文档，要求查看、整理或确认收到 -> medical_examiner（体检员会读取文档信息）
+3. 新用户首次对话或基本信息不全 -> medical_examiner
+4. 用户描述症状但还没收集完整信息 -> medical_examiner
+5. 【重要】如果体检员已经回复“将为您转接主治医生”或已生成健康摘要，说明信息收集完成 -> attending_doctor
+6. 用户信息充足（有姓名、年龄、症状、病史），需要诊断治疗 -> attending_doctor
+7. 医生已给出诊断和处方，需要用药指导 -> pharmacist
+8. 明确问药品相关问题 -> pharmacist
+9. 简单问候/闲聊/不确定需求 -> supervisor
+10. 子智能体已完成处理，对话可以结束 -> supervisor
 
 【注意事项】
 - 如果对话中已经有【体检员】的回复，并且体检员说“将为您转接主治医生”或已生成摘要，必须路由到 attending_doctor
 - 不要重复路由到 medical_examiner，除非用户主动提供新信息需要补充
+- 用户询问已上传报告中的具体数值时，即使基本信息不全，也直接路由到 attending_doctor，不要路由到 medical_examiner
 
 【输出要求】
 只回复一个单词: supervisor 或 medical_examiner 或 attending_doctor 或 pharmacist

@@ -39,7 +39,7 @@ def _resolve_user_id(requested: str, current_user: User) -> str:
     if requested and requested != actual:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="无权访问其他用户的偏好数据",
+            detail="无权访问其他用户的数据",
         )
     return actual
 
