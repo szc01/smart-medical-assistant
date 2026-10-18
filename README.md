@@ -183,6 +183,14 @@ python main.py
 - API 文档：<http://localhost:8000/docs>
 - 健康检查：<http://localhost:8000/>
 
+### 运行后端测试
+
+```bash
+cd backend && pip install -r requirements-dev.txt && pytest tests/ -q
+```
+
+> 测试使用假 embedding 与临时目录，不需要 API Key，也不需要数据库。
+
 ### 第 3 步：启动前端
 
 ```bash
@@ -254,13 +262,13 @@ curl -X POST http://localhost:8000/auth/token \
 - **单轮路由**：子智能体执行完即结束，不做工具调用的多轮自循环（见设计要点 2）。
 - **PDF 仅支持文本层**：扫描件需先 OCR；正文读取上限 8000 字符。
 - **模型强绑定 DashScope**：换模型需改 `app/agents/base.py` 与 `app/rag/document_extractor.py` 的模型名与 endpoint。
-- **未覆盖自动化测试**：CI 目前只做 Python 语法检查与前端构建，没有单测/集成测试。
+- **自动化测试覆盖有限**：已有 RAG 检索层单测 6 条（假 embedding，不连网络也不连数据库）和体检员转接判断单测 2 条；CI 尚未接入。
 - **未做数据迁移**：表结构由 `create_all` 生成，字段变更没有 Alembic 迁移脚本。
 
 ## Roadmap
 
 - [ ] 对话改为 SSE 流式输出
-- [ ] 补充 pytest（记忆读写、路由决策、PDF 抽取的 mock 测试）
+- [x] 补充 pytest（已完成 RAG 检索层与转接判断；待补记忆读写、路由决策、PDF 抽取的 mock 测试）
 - [ ] 引入 Alembic 管理表结构变更
 - [ ] PDF 增加 OCR（PaddleOCR / Tesseract）与分块检索（RAG 召回而非截断）
 - [ ] 前端会话列表虚拟滚动、错误态与空态统一
