@@ -10,11 +10,9 @@
 
 ![Vue](https://img.shields.io/badge/Vue-3.5-42B883?logo=vuedotjs\&logoColor=white)
 
-
-
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-![CI](https://github.com/szc01/smart-medical-assistant/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/szc01/smart-medical-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/szc01/smart-medical-assistant/actions/workflows/ci.yml)
 
 ---
 
