@@ -191,6 +191,17 @@ cd backend && pip install -r requirements-dev.txt && pytest tests/ -q
 
 > 测试使用假 embedding 与临时目录，不需要 API Key，也不需要数据库。
 
+### 持续集成
+
+`.github/workflows/ci.yml` 在 push / PR 到 `main` 时触发，包含两个 job：
+
+| Job | 实际执行内容 |
+| --- | --- |
+| `Backend syntax check` | `python -m compileall -q backend/app backend/main.py` |
+| `Frontend type-check & build` | `npm ci` + `npm run build`，其中 `vue-tsc --noEmit -p tsconfig.app.json` 做全量类型检查，再 `vite build` 产出 |
+
+> 后端 pytest 尚未接入 CI（需要在 workflow 里安装 `requirements-dev.txt` 并执行 `pytest tests/ -q`），目前靠本地手动运行。
+
 ### 第 3 步：启动前端
 
 ```bash
@@ -262,7 +273,7 @@ curl -X POST http://localhost:8000/auth/token \
 - **单轮路由**：子智能体执行完即结束，不做工具调用的多轮自循环（见设计要点 2）。
 - **PDF 仅支持文本层**：扫描件需先 OCR；正文读取上限 8000 字符。
 - **模型强绑定 DashScope**：换模型需改 `app/agents/base.py` 与 `app/rag/document_extractor.py` 的模型名与 endpoint。
-- **自动化测试覆盖有限**：已有 RAG 检索层单测 6 条（假 embedding，不连网络也不连数据库）和体检员转接判断单测 2 条；CI 尚未接入。
+- **自动化测试覆盖有限**：已有 8 条单测（RAG 检索层 6 条，假 embedding，不连网络也不连数据库；体检员转接判断 2 条）；前端在 CI 里做 `vue-tsc` 类型检查与生产构建，**后端 pytest 尚未接入 CI**。
 - **未做数据迁移**：表结构由 `create_all` 生成，字段变更没有 Alembic 迁移脚本。
 
 ## Roadmap
