@@ -3,12 +3,16 @@
 短记忆由LangGraph自动管理（PostgresSaver）
 支持文档上传后的智能分析
 """
-# 导入正则表达式模块（用于匹配文档上传消息）
+# 导入异步与其他标准库（SSE 流式输出需要）
+import asyncio
+import json
 import re
+import threading
+from typing import AsyncIterator
 # 导入 FastAPI 相关组件：APIRouter(路由)、Depends(依赖注入)、HTTPException(HTTP异常)、status(状态码)
 from fastapi import APIRouter, Depends, HTTPException, status
-# 导入 JSON 响应类（用于返回 JSON 格式数据）
-from fastapi.responses import JSONResponse
+# 导入 JSON 响应类与流式响应类
+from fastapi.responses import JSONResponse, StreamingResponse
 # 导入 SQLAlchemy 数据库会话类型
 from sqlalchemy.orm import Session
 # 导入 Pydantic 基础模型（用于数据验证）
@@ -44,6 +48,22 @@ class ChatRequest(BaseModel):
     thread_id: str
 
 
+def _prepare_chat(request: ChatRequest, current_user: User, db: Session) -> str:
+    """校验归属 + 更新会话元信息，返回已校验的 user_id。"""
+    user_id = _resolve_user_id(request.user_id, current_user)
+
+    conversation = db.query(Conversation).filter(
+        Conversation.id == request.thread_id
+    ).first()
+    if conversation and conversation.user_id != current_user.id:
+        raise HTTPException(403, "无权访问该会话")
+    if conversation:
+        conversation.last_message = request.message[:50] + ("..." if len(request.message) > 50 else "")
+        conversation.last_active = datetime.now()
+        db.commit()
+    return user_id
+
+
 @router.post("/send")
 async def send_message(
     # 聊天请求数据（从 JSON body 中解析）
@@ -53,25 +73,10 @@ async def send_message(
     # PostgreSQL 数据库会话（依赖注入）
     db: Session = Depends(get_postgres_db)
 ):
-    # 校验请求中的 user_id 与登录态一致，防止越权读写长记忆
-    user_id = _resolve_user_id(request.user_id, current_user)
     # 发送消息接口（非流式，短记忆自动持久化，支持文档上传分析）
     try:
-        # 从数据库查询会话记录（根据 thread_id）
-        conversation = db.query(Conversation).filter(
-            Conversation.id == request.thread_id
-        ).first()
-        # 会话归属校验：禁止通过 thread_id 访问他人会话
-        if conversation and conversation.user_id != current_user.id:
-            raise HTTPException(403, "无权访问该会话")
-        # 如果会话存在
-        if conversation:
-            # 更新会话的最后一条消息（截断到50字符，超长则加省略号）
-            conversation.last_message = request.message[:50] + ("..." if len(request.message) > 50 else "")
-            # 更新会话的最后活跃时间为当前时间
-            conversation.last_active = datetime.now()
-            # 提交事务，保存更新到数据库
-            db.commit()
+        # 校验归属并更新会话元信息，防止越权读写长记忆
+        user_id = _prepare_chat(request, current_user, db)
         
         # 创建医疗智能体系统（包含4个智能体节点）
         graph = create_medical_agent_system()
@@ -149,3 +154,149 @@ async def send_message(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"发送消息失败: {str(e)}"
         )
+
+
+AGENT_LABELS = {
+    "attending_doctor": "主治医生",
+    "pharmacist": "药师",
+    "medical_examiner": "体检员",
+    "supervisor": "私人医疗顾问",
+}
+
+
+def _sse(payload: dict) -> str:
+    # ensure_ascii=False：中文不转成 \uXXXX，省带宽也方便排查
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+async def _iter_graph_events(graph, initial_state: dict, config: dict) -> AsyncIterator[tuple]:
+    """优先用 astream；同步 checkpointer（PostgresSaver）不支持异步接口时退回线程内 stream。"""
+    emitted = False
+    try:
+        async for mode, payload in graph.astream(
+            initial_state, config=config, stream_mode=["messages", "values"]
+        ):
+            emitted = True
+            yield mode, payload
+        return
+    except NotImplementedError:
+        # 已经吐出事件后再失败无法安全重放，交回上层按错误事件处理
+        if emitted:
+            raise
+
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue = asyncio.Queue()
+    stop = threading.Event()
+    done = object()
+
+    def push(item: tuple) -> None:
+        if stop.is_set() or loop.is_closed():
+            return
+        try:
+            loop.call_soon_threadsafe(queue.put_nowait, item)
+        except RuntimeError:
+            pass
+
+    def worker() -> None:
+        try:
+            for item in graph.stream(
+                initial_state, config=config, stream_mode=["messages", "values"]
+            ):
+                if stop.is_set():
+                    break
+                push(("event", item))
+        except BaseException as exc:  # 异常送回消费端统一转成 error 事件
+            push(("error", exc))
+        else:
+            push(("done", None))
+
+    threading.Thread(target=worker, daemon=True).start()
+    try:
+        while True:
+            kind, value = await queue.get()
+            if kind == "done":
+                return
+            if kind == "error":
+                raise value
+            yield value
+    finally:
+        stop.set()
+
+
+async def event_stream(graph, initial_state: dict, config: dict) -> AsyncIterator[str]:
+    """把图的执行过程转成 SSE 事件流。graph 参数化是为了能用假图做单测。"""
+    sent_any = False
+    label_sent = False
+    final_state = None
+    total = 0
+
+    try:
+        async for mode, payload in _iter_graph_events(graph, initial_state, config):
+            if mode == "messages":
+                chunk, meta = payload
+
+                # 排除 supervisor 的路由决策 token
+                if "route_decision" in (meta.get("tags") or ()):
+                    continue
+
+                text = getattr(chunk, "content", None)
+                if not text:          # 实测 398 个事件里只有 14 个非空
+                    continue
+
+                if not label_sent:
+                    node = meta.get("langgraph_node", "")
+                    yield _sse({"type": "meta", "agent": node,
+                                "label": AGENT_LABELS.get(node, "")})
+                    label_sent = True
+
+                sent_any = True
+                total += len(text)
+                yield _sse({"type": "token", "text": text})
+
+            elif mode == "values":
+                final_state = payload
+
+        # 兜底：体检员早返回（wants_report_value 命中）不调 LLM，没有 token 流
+        if not sent_any and final_state and final_state.get("messages"):
+            text = str(final_state["messages"][-1].content)
+            if text:
+                if not label_sent:
+                    yield _sse({"type": "meta", "agent": "medical_examiner", "label": "体检员"})
+                total = len(text)
+                yield _sse({"type": "token", "text": text})
+
+        yield _sse({"type": "done", "chars": total})
+
+    except asyncio.CancelledError:
+        raise                     # 客户端断开，别吞，也别试着写 error 事件
+    except Exception as exc:
+        yield _sse({"type": "error", "detail": str(exc)})
+
+
+@router.post("/stream")
+async def stream_message(
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_postgres_db),
+):
+    user_id = _prepare_chat(request, current_user, db)
+    graph = create_medical_agent_system()
+
+    initial_state = {
+        "messages": [HumanMessage(content=request.message)],
+        "user_id": user_id,
+        "thread_id": request.thread_id,
+        "medical_documents": [],
+        "next": None,
+    }
+    config = {"configurable": {"user_id": user_id, "thread_id": request.thread_id}}
+
+    return StreamingResponse(
+        event_stream(graph, initial_state, config),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
