@@ -64,6 +64,7 @@ async def upload_document(
     db: Session = Depends(get_postgres_db)
 ):
     """上传医疗文档，提取信息并保存到长记忆"""
+    user_id = _resolve_user_id(user_id, current_user)
     try:
         # 打印上传开始日志（文件名和用户 ID）
         print(f"[INFO] 开始上传文档: {file.filename}, 用户: {user_id}")
@@ -88,7 +89,7 @@ async def upload_document(
         print(f"[INFO] 文件保存成功: {file_path}")
         
         # 调用文档提取函数，从 PDF 中提取医疗信息（返回 MedicalRecord 对象）
-        record = extract_medical_info_from_pdf(file_path)
+        record = await asyncio.to_thread(extract_medical_info_from_pdf, file_path)
         
 
         
