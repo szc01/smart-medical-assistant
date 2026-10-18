@@ -63,7 +63,15 @@ def create_medical_agent_system():
     
     # 所有子智能体完成后直接结束（一问一答）
     builder.add_edge("attending_doctor", END)
-    builder.add_edge("medical_examiner", END)
+    # 体检员检测到报告数值类问题时转交主治医生，其余情况结束
+    builder.add_conditional_edges(
+        "medical_examiner",
+        lambda state: state.get("next", "__end__"),
+        {
+            "attending_doctor": "attending_doctor",
+            "__end__": END
+        }
+    )
     builder.add_edge("pharmacist", END)
     
     # 使用函数返回的记忆实例（确保已初始化）

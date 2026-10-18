@@ -18,6 +18,7 @@ from app.agents.memory import (
     get_user_long_memory
 )
 from app.agents.tools import search_web, save_user_info, save_medical_info
+from app.rag.context import last_human_text, wants_report_value
 
 
 # 体检员提示词
@@ -52,7 +53,7 @@ MEDICAL_EXAMINER_PROMPT = """
 7. 收集到信息后立即保存，不要告诉用户已保存
 8. 信息收集够了就生成健康信息摘要
 9. 用户之前说过的病史、过敏史可能不完整，回复时应告诉用户当前已知的信息，并询问是否还有补充
-10. 【重要】如果用户询问已上传报告/病历/化验单中的具体数值（如血糖、血红蛋白、化验值），禁止回答“无法查询”“未找到”“无法读取”这类内容，应说明“这部分由主治医生为您解读”，并结束本轮，不要自行给出数值
+10. 【重要】如果用户询问已上传报告/病历/化验单中的具体数值（如血糖、血红蛋白、化验值），禁止回答“无法查询”“未找到”“无法读取”这类内容，应说明“这部分我请主治医生为您解读，正在为您转接”，不要自行给出数值
 
 不是你的职责（不要做）：
 - 不要诊断疾病、不要开药，那是医生的工作
@@ -84,12 +85,22 @@ MEDICAL_EXAMINER_PROMPT = """
 def medical_examiner_node(state: MedicalAgentState):
     """体检员：收集用户基本信息、症状、病史、过敏史等"""
     try:
-        # 获取聊天模型实例
-        model = get_model()
         # 从状态中获取消息列表
         messages = state["messages"]
         # 从状态中获取用户ID
         user_id = state["user_id"]
+
+        # 报告数值类问题不进入信息收集流程，直接转交主治医生
+        if wants_report_value(last_human_text(messages)):
+            return {
+                "messages": [
+                    AIMessage(content="【体检员】\n这部分我请主治医生为您解读，正在为您转接")
+                ],
+                "next": "attending_doctor",
+            }
+
+        # 获取聊天模型实例
+        model = get_model()
         # 获取长记忆存储器实例
         store = get_long_term_memory()
         
