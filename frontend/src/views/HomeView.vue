@@ -12,6 +12,12 @@ interface Message {
   timestamp: Date
 }
 
+interface ApiMessage {
+  role: Message['role']
+  content: string
+  timestamp?: string
+}
+
 interface Conversation {
   id: string
   title: string
@@ -80,7 +86,10 @@ const loadConversations = async () => {
       
       // 如果有会话，加载第一个会话
       if (conversations.value.length > 0) {
-        await selectConversation(conversations.value[0].id)
+        const firstConversation = conversations.value[0]
+        if (firstConversation) {
+          await selectConversation(firstConversation.id)
+        }
       } else {
         await createNewConversation()
       }
@@ -162,7 +171,7 @@ const selectConversation = async (convId: string) => {
 
     if (response.status === 200) {
       console.log('获取会话详情响应:', response.data)
-      const messagesData = response.data.messages || []
+      const messagesData: ApiMessage[] = response.data.messages || []
       console.log('消息数据:', messagesData)
       
       messages.value = messagesData.map((msg) => ({
@@ -215,7 +224,10 @@ const deleteConversation = async (convId: string) => {
         // 如果删除的是当前会话，选择第一个会话或创建新会话
         if (currentConversation.value === convId) {
           if (conversations.value.length > 0) {
-            await selectConversation(conversations.value[0].id)
+            const nextConversation = conversations.value[0]
+            if (nextConversation) {
+              await selectConversation(nextConversation.id)
+            }
           } else {
             await createNewConversation()
           }
@@ -357,7 +369,10 @@ const startTypeWriter = (assistantMessageId: number) => {
   typingTimer.value = window.setInterval(() => {
     if (index < content.length) {
       currentAiContent.value += content.charAt(index)
-      messages.value[assistantMessageId].content = currentAiContent.value
+      const assistantMessage = messages.value[assistantMessageId]
+      if (assistantMessage) {
+        assistantMessage.content = currentAiContent.value
+      }
       scrollToBottom()
       index++
     } else {
@@ -452,7 +467,7 @@ const handleSend = async () => {
     // 消息保存由后端自动处理，前端无需调用 save_message 接口
     // 长短记忆持久化由后端 LangGraph 自动完成
   } catch (error) {
-    if (error.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       console.log('请求已取消')
     } else {
       console.error('发送消息失败:', error)
@@ -505,9 +520,10 @@ const checkPreferenceCommand = (message: string) => {
   const preferenceRegex = /设置偏好：(\w+)=([^\n]+)/
   const match = message.match(preferenceRegex)
   if (match) {
-    const key = match[1].trim()
-    const value = match[2].trim()
-    handleSetPreference(key, value)
+    const key = match[1]
+    const value = match[2]
+    if (!key || !value) return false
+    handleSetPreference(key.trim(), value.trim())
     return true
   }
   return false
@@ -515,6 +531,7 @@ const checkPreferenceCommand = (message: string) => {
 
 // 处理文件上传
 const handleFileUpload = async (file: any) => {
+  let progressInterval: ReturnType<typeof setInterval> | null = null
   try {
     // 询问用户文档类型
     const documentType = prompt('请选择文档类型:', '病历本')
@@ -525,9 +542,9 @@ const handleFileUpload = async (file: any) => {
     uploadProgress.value = 0
     
     // 模拟进度条动画
-    const progressInterval = setInterval(() => {
+    progressInterval = setInterval(() => {
       if (uploadProgress.value < 90) {
-        uploadProgress.value += Math.random() * 15
+        uploadProgress.value = Math.min(uploadProgress.value + Math.random() * 15, 90)
       }
     }, 500)
     
@@ -544,7 +561,10 @@ const handleFileUpload = async (file: any) => {
       }
     })
     
-    clearInterval(progressInterval)
+    if (progressInterval !== null) {
+      clearInterval(progressInterval)
+      progressInterval = null
+    }
     uploadProgress.value = 100
 
     if (response.status === 200) {
@@ -582,7 +602,10 @@ const handleFileUpload = async (file: any) => {
     }
   } catch (error) {
     console.error('上传文件失败:', error)
-    clearInterval(progressInterval)
+    if (progressInterval !== null) {
+      clearInterval(progressInterval)
+      progressInterval = null
+    }
     isUploading.value = false
     uploadProgress.value = 0
     ElMessage.error('上传文件失败，请重试')
@@ -619,18 +642,22 @@ const loadChatHistory = async () => {
             const userMatch = line.match(/用户: (.*?)\\n助手:/)
             const assistantMatch = line.match(/助手: (.*)/)
             if (userMatch && assistantMatch) {
-              // 添加用户消息
-              messages.value.push({
-                role: 'user',
-                content: userMatch[1].trim(),
-                timestamp: new Date()
-              })
-              // 添加助手消息
-              messages.value.push({
-                role: 'assistant',
-                content: assistantMatch[1].trim(),
-                timestamp: new Date()
-              })
+              const userContent = userMatch[1]
+              const assistantContent = assistantMatch[1]
+              if (userContent !== undefined && assistantContent !== undefined) {
+                // 添加用户消息
+                messages.value.push({
+                  role: 'user',
+                  content: userContent.trim(),
+                  timestamp: new Date()
+                })
+                // 添加助手消息
+                messages.value.push({
+                  role: 'assistant',
+                  content: assistantContent.trim(),
+                  timestamp: new Date()
+                })
+              }
             }
           }
         })

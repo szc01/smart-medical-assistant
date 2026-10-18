@@ -151,11 +151,11 @@ const loadPreferences = async () => {
     // 解析偏好设置
     if (prefs) {
       const prefLines = prefs.split('\n')
-      prefLines.forEach(line => {
+      prefLines.forEach((line: string) => {
         const [key, value] = line.split(': ')
-        if (key === 'preferred_style') {
+        if (key === 'preferred_style' && value !== undefined) {
           preferredStyle.value = value
-        } else if (key === 'allergies') {
+        } else if (key === 'allergies' && value !== undefined) {
           allergies.value = value
         }
       })
