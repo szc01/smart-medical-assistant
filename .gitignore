@@ -75,9 +75,15 @@ desktop.ini
 # 用户上传的医疗文档（含个人隐私，不入库）
 backend/uploads/*
 !backend/uploads/.gitkeep
+# 向量库落盘目录（Chroma，按用户分库）
+backend/storage/
 # 日志
 *.log
 logs/
+
+# ===== 内部工作文档 =====
+# docs/ 下是对外文档；.internal/ 是改写方案、交接指令等不对外发布的工作稿
+.internal/
 
 # ===== 其他 =====
 *.zip
