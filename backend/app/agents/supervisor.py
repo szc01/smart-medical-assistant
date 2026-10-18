@@ -107,7 +107,9 @@ def supervisor_node(state: MedicalAgentState):
         
         # 组合系统提示词和对话历史,构建完整的消息列表供LLM进行路由决策
         route_messages = [SystemMessage(content=route_prompt)] + messages
-        route_response = model.invoke(
+        # 路由只需输出一个单词，单独关闭 thinking 以降低首 token 延迟
+        route_model = get_model(disable_thinking=True)
+        route_response = route_model.invoke(
             route_messages,
             config={"tags": ["route_decision"]},
         )
