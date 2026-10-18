@@ -7,8 +7,10 @@
 - 药品替代方案
 """
 
-from langchain_core.messages import AIMessage, SystemMessage
+import logging
 import uuid
+
+from langchain_core.messages import AIMessage, SystemMessage
 
 from app.agents.base import get_model
 from langchain.agents import create_agent
@@ -20,6 +22,14 @@ from app.agents.memory import (
     save_user_long_memory
 )
 from app.agents.tools import search_web, save_medical_info
+from app.rag.context import (
+    REFERENCE_MESSAGE_ID,
+    build_reference_block,
+    last_human_text,
+)
+from app.rag.vector_store import search
+
+logger = logging.getLogger(__name__)
 
 
 # 药师提示词
@@ -43,6 +53,10 @@ PHARMACIST_PROMPT = """
 - 不要诊断疾病，那是医生的工作
 - 不要收集用户基本信息，那是体检员的工作
 - 不要做导诊引导，那是顾问的工作
+
+【病历参考】
+若上方参考片段与该问题相关，必须优先依据片段作答，并在句末标注来源，格式如（依据《体检报告》第 2 页）；
+片段与问题无关时直接忽略，严禁据此编造不存在的信息。
 
 【语言风格】
 简明扼要，像药房窗口的药师。
@@ -76,7 +90,22 @@ def pharmacist_node(state: MedicalAgentState):
             system_message = SystemMessage(content=f"用户历史信息（特别注意过敏史）：\n\n{user_memory}")
             # 将系统消息插入到消息列表最前面
             messages = [system_message] + messages
-        
+
+        # 检索该用户病历，命中时仅以 SystemMessage 注入本次调用，不写入 state
+        reference_message = None
+        try:
+            query = last_human_text(state["messages"])
+            hits = search(user_id, query, k=4)
+            block = build_reference_block(hits)
+            if block:
+                reference_message = SystemMessage(
+                    content=block,
+                    id=REFERENCE_MESSAGE_ID,
+                )
+                messages = [reference_message] + messages
+        except Exception as exc:
+            logger.warning("病历检索失败（user_id=%s）：%s", user_id, exc)
+
         # 创建药师智能体（包含联网搜索、保存医疗信息工具）
         agent = create_agent(
             model=model,
@@ -89,10 +118,20 @@ def pharmacist_node(state: MedicalAgentState):
         # 调用智能体处理消息
         response = agent.invoke({"messages": messages}, config=config)
         
+        response_messages = response["messages"]
+        # 参考片段只服务本次调用，返回状态前剔除，避免写入 checkpoint 后逐轮重放
+        if reference_message is not None:
+            response_messages = [
+                message
+                for message in response_messages
+                if message is not reference_message
+                and getattr(message, "id", None) != REFERENCE_MESSAGE_ID
+            ]
+
         # 如果有响应消息，添加角色前缀并保存处方信息
-        if response["messages"]:
+        if response_messages:
             # 获取最后一条消息
-            last_msg = response["messages"][-1]
+            last_msg = response_messages[-1]
             # 如果是 AI 消息
             if isinstance(last_msg, AIMessage):
                 # 如果还没有角色前缀，添加【药师】
@@ -108,9 +147,9 @@ def pharmacist_node(state: MedicalAgentState):
         
         # 返回响应消息、处方信息并结束流程
         return {
-            "messages": response["messages"],
+            "messages": response_messages,
             # 提取处方信息（最后一条消息的内容）
-            "prescription": response["messages"][-1].content if response["messages"] else "",
+            "prescription": response_messages[-1].content if response_messages else "",
             "next": "__end__"
         }
     except Exception as e:
