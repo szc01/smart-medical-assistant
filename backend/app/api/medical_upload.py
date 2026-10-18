@@ -1,26 +1,47 @@
+# 导入异步模块（用于把同步索引放入线程，避免阻塞事件循环）
+import asyncio
+# 导入日志模块（用于索引失败告警）
+import logging
 # 导入操作系统模块（用于文件路径和目录操作）
 import os
 # 导入 UUID 模块（用于生成唯一文件名）
 import uuid
 # 导入 FastAPI 相关组件：APIRouter(路由)、Depends(依赖注入)、HTTPException(HTTP异常)、status(状态码)、UploadFile(文件上传)、File(文件参数)、Form(表单参数)
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+# 导入 Pydantic 请求模型
+from pydantic import BaseModel
 # 导入 SQLAlchemy 数据库会话类型
 from sqlalchemy.orm import Session
 # 导入 PostgreSQL 数据库会话工厂函数
 from app.database.postgres import get_postgres_db
 # 导入用户认证函数（获取当前登录用户）
 from app.api.auth import get_current_user
+# 导入用户归属校验函数（与偏好接口共用，避免复制校验逻辑）
+from app.api.preferences import _resolve_user_id
 # 导入用户 ORM 模型
 from app.models.user import User
 # 导入医疗文档 ORM 模型
 from app.models.medical_document import MedicalDocument
 # 导入文档提取函数和保存函数
 from app.rag.document_extractor import extract_medical_info_from_pdf, save_extracted_info_to_store
+# 导入向量索引与检索函数
+from app.rag.vector_store import index_document, search
 # 导入长记忆获取函数
 from app.agents.multi_agent import get_long_term_memory
 
 # 创建文档路由实例
 router = APIRouter()
+
+# 模块日志记录器
+logger = logging.getLogger(__name__)
+
+
+class DocumentSearchRequest(BaseModel):
+    """文档检索请求体"""
+
+    user_id: str = ""
+    query: str
+    k: int = 4
 
 # 文档存储目录路径
 UPLOAD_DIR = "./uploads"
@@ -106,7 +127,22 @@ async def upload_document(
         db.commit()
         # 刷新文档对象，获取数据库生成的字段（如 id）
         db.refresh(db_document)
-        
+
+        # 向量索引失败只告警，不影响上传主流程
+        indexed_chunks = 0
+        try:
+            indexed_chunks = await asyncio.wait_for(
+                asyncio.to_thread(index_document, user_id, file_path, file.filename),
+                timeout=120,
+            )
+        except Exception as exc:
+            logger.warning(
+                "文档向量索引失败（user_id=%s, filename=%s）：%s",
+                user_id,
+                file.filename,
+                exc,
+            )
+
         # 返回成功响应
         return {
             # 提示信息
@@ -116,7 +152,9 @@ async def upload_document(
             # 保存的字段列表
             "extracted_items": saved_items,
             # 保存的字段总数
-            "total_items": len(saved_items)
+            "total_items": len(saved_items),
+            # 写入向量库的块数（索引失败时为 0）
+            "indexed_chunks": indexed_chunks
         }
     except Exception as e:
         # 导入 traceback 模块（用于打印详细错误堆栈）
@@ -130,6 +168,17 @@ async def upload_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"上传文档失败: {str(e)}"
         )
+
+
+@router.post("/search")
+def search_documents(
+    payload: DocumentSearchRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """按用户归属检索当前用户的病历片段"""
+    user_id = _resolve_user_id(payload.user_id, current_user)
+    results = search(user_id, payload.query, k=payload.k)
+    return {"results": results, "total": len(results)}
 
 
 
