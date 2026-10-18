@@ -31,8 +31,8 @@ class ConversationCreate(BaseModel):
 async def create_conversation(
     # 会话创建数据（从 JSON body 中解析）
     conversation: ConversationCreate,
-    # 用户 ID（从查询参数获取）
-    user_id: int,
+    # 用户 ID（从查询参数获取；可选，仅用于兼容旧前端，最终以登录态为准）
+    user_id: int | None = None,
     # 当前登录用户（依赖注入，用于权限验证）
     current_user: User = Depends(get_current_user),
     # PostgreSQL 数据库会话（依赖注入）
@@ -40,6 +40,13 @@ async def create_conversation(
 ):
     """创建新会话"""
     try:
+        # 禁止为其他用户创建会话
+        if user_id is not None and user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="无权为其他用户创建会话"
+            )
+
         # 从数据库查询会话 ID 是否已存在
         existing_conv = db.query(Conversation).filter(
             Conversation.id == conversation.id
@@ -56,7 +63,7 @@ async def create_conversation(
         # 创建新会话 ORM 对象
         new_conv = Conversation(
             id=conversation.id,                        # 会话 ID
-            user_id=user_id,                           # 用户 ID
+            user_id=current_user.id,                   # 会话归属一律使用登录用户
             title=conversation.title,                  # 会话标题
             last_message="",                           # 最后一条消息（初始为空）
             last_active=datetime.now(),                # 最后活跃时间（当前时间）
