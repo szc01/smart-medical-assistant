@@ -2,12 +2,19 @@
 
 > 基于 **LangGraph 多智能体协作**的医疗咨询系统：支持导诊分流、多轮问诊、PDF 病历结构化提取与跨会话记忆，前后端分离，开箱可跑。
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.135-009688?logo=fastapi&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python\&logoColor=white)
+
+![FastAPI](https://img.shields.io/badge/FastAPI-0.135-009688?logo=fastapi\&logoColor=white)
+
 ![LangGraph](https://img.shields.io/badge/LangGraph-1.0-1C3C3C)
-![Vue](https://img.shields.io/badge/Vue-3.5-42B883?logo=vuedotjs&logoColor=white)
+
+![Vue](https://img.shields.io/badge/Vue-3.5-42B883?logo=vuedotjs\&logoColor=white)
+
+
+
 ![License](https://img.shields.io/badge/License-MIT-green)
-[![CI](https://github.com/szc01/smart-medical-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/szc01/smart-medical-assistant/actions/workflows/ci.yml)
+
+![CI](https://github.com/szc01/smart-medical-assistant/actions/workflows/ci.yml/badge.svg)
 
 ---
 
@@ -23,15 +30,15 @@
 
 ## 功能
 
-| 模块 | 说明 |
-| --- | --- |
+| 模块     | 说明                                                          |
+| ------ | ----------------------------------------------------------- |
 | 多智能体导诊 | supervisor 用 LLM 判定路由，分派给体检员 / 主治医生 / 药师，各角色独立 prompt 与职责边界 |
-| 双记忆体系 | 短记忆按 `thread_id` 隔离会话；长记忆按用户存画像、病史、过敏史，跨会话生效 |
-| 病历结构化 | 上传 PDF → 文本抽取 → Pydantic 结构化输出 → 写入长记忆 + 落库，前端自动触发 AI 解读 |
-| 会话管理 | 新建 / 列表 / 详情 / 删除，会话与消息记录落 PostgreSQL |
-| 用户体系 | 注册、登录、bcrypt 密码哈希、JWT 鉴权，路由级登录守卫 |
-| 偏好设置 | 回答风格、过敏史等偏好写入长记忆，与对话流程共用同一份存储 |
-| 联网检索 | 通过 Tavily 为智能体提供实时信息检索工具 |
+| 双记忆体系  | 短记忆按 `thread_id` 隔离会话；长记忆按用户存画像、病史、过敏史，跨会话生效                |
+| 病历结构化  | 上传 PDF → 文本抽取 → Pydantic 结构化输出 → 写入长记忆 + 落库，前端自动触发 AI 解读    |
+| 会话管理   | 新建 / 列表 / 详情 / 删除，会话与消息记录落 PostgreSQL                       |
+| 用户体系   | 注册、登录、bcrypt 密码哈希、JWT 鉴权，路由级登录守卫                            |
+| 偏好设置   | 回答风格、过敏史等偏好写入长记忆，与对话流程共用同一份存储                               |
+| 联网检索   | 通过 Tavily 为智能体提供实时信息检索工具                                    |
 
 ## 架构
 
@@ -74,8 +81,8 @@ POST /chat/send
 
 ## 技术栈
 
-**后端**：Python 3.12 · FastAPI · LangGraph 1.0 · LangChain 1.0 · SQLAlchemy 2.0 · PostgreSQL（长期记忆 / 会话 / 医疗文档）· MySQL（用户账号）· Pydantic 2 · python-jose + bcrypt
-**前端**：Vue 3.5（Composition API）· TypeScript · Vite 6 · Element Plus · Pinia · Vue Router 4 · Axios · marked
+**后端**：Python 3.12 · FastAPI · LangGraph 1.0 · LangChain 1.0 · SQLAlchemy 2.0 · PostgreSQL（长期记忆 / 会话 / 医疗文档）· MySQL（用户账号）· Pydantic 2 · python-jose + bcrypt  
+**前端**：Vue 3.5（Composition API）· TypeScript · Vite 6 · Element Plus · Pinia · Vue Router 4 · Axios · marked  
 **模型与外部服务**：阿里云百炼（DashScope，OpenAI 兼容端点，默认 `qwen3.5-plus`）· Tavily 联网检索 · LangSmith 追踪（可选）
 
 ## 目录结构
@@ -195,9 +202,9 @@ cd backend && pip install -r requirements-dev.txt && pytest tests/ -q
 
 `.github/workflows/ci.yml` 在 push / PR 到 `main` 时触发，包含两个 job：
 
-| Job | 实际执行内容 |
-| --- | --- |
-| `Backend syntax check` | `python -m compileall -q backend/app backend/main.py` |
+| Job                           | 实际执行内容                                                                                          |
+| ----------------------------- | ----------------------------------------------------------------------------------------------- |
+| `Backend syntax check`        | `python -m compileall -q backend/app backend/main.py`                                           |
 | `Frontend type-check & build` | `npm ci` + `npm run build`，其中 `vue-tsc --noEmit -p tsconfig.app.json` 做全量类型检查，再 `vite build` 产出 |
 
 > 后端 pytest 尚未接入 CI（需要在 workflow 里安装 `requirements-dev.txt` 并执行 `pytest tests/ -q`），目前靠本地手动运行。
@@ -215,18 +222,18 @@ npm run dev
 
 ### 环境变量一览（`backend/.env`）
 
-| 变量 | 必填 | 说明 |
-| --- | --- | --- |
-| `DASHSCOPE_API_KEY` | ✅ | 阿里云百炼 Key，用于对话与 PDF 抽取 |
-| `TAVILY_API_KEY` | ⬜ | 联网检索工具，缺失时搜索工具报错但不影响主流程 |
-| `DATABASE_URL` | ✅ | MySQL DSN，前缀必须是 `mysql+mysqlconnector://` |
-| `POSTGRES_SHORT_TERM_URL` | ✅ | 短记忆库，前缀必须是 `postgresql://`（走 psycopg_pool） |
-| `POSTGRES_LONG_TERM_URL` | ✅ | 长记忆库，同上 |
-| `POSTGRES_SESSION_URL` | ✅ | 会话库，前缀必须是 `postgresql+psycopg://`（走 SQLAlchemy） |
-| `SECRET_KEY` / `ALGORITHM` | ✅ | JWT 签名密钥与算法 |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | ⬜ | Token 有效期，默认 1440 分钟 |
-| `LANGCHAIN_TRACING_V2` / `LANGCHAIN_API_KEY` | ⬜ | LangSmith 追踪，不填则关闭 |
-| `HOST` / `PORT` | ⬜ | 默认 `0.0.0.0:8000` |
+| 变量                                           | 必填 | 说明                                              |
+| -------------------------------------------- | -- | ----------------------------------------------- |
+| `DASHSCOPE_API_KEY`                          | ✅  | 阿里云百炼 Key，用于对话与 PDF 抽取                          |
+| `TAVILY_API_KEY`                             | ⬜  | 联网检索工具，缺失时搜索工具报错但不影响主流程                         |
+| `DATABASE_URL`                               | ✅  | MySQL DSN，前缀必须是 `mysql+mysqlconnector://`       |
+| `POSTGRES_SHORT_TERM_URL`                    | ✅  | 短记忆库，前缀必须是 `postgresql://`（走 psycopg_pool）      |
+| `POSTGRES_LONG_TERM_URL`                     | ✅  | 长记忆库，同上                                         |
+| `POSTGRES_SESSION_URL`                       | ✅  | 会话库，前缀必须是 `postgresql+psycopg://`（走 SQLAlchemy） |
+| `SECRET_KEY` / `ALGORITHM`                   | ✅  | JWT 签名密钥与算法                                     |
+| `ACCESS_TOKEN_EXPIRE_MINUTES`                | ⬜  | Token 有效期，默认 1440 分钟                            |
+| `LANGCHAIN_TRACING_V2` / `LANGCHAIN_API_KEY` | ⬜  | LangSmith 追踪，不填则关闭                              |
+| `HOST` / `PORT`                              | ⬜  | 默认 `0.0.0.0:8000`                               |
 
 > 三种 PostgreSQL 前缀不一样是**故意**的：连接池库（LangGraph 内部）只认纯 `postgresql://`，而 SQLAlchemy ORM 必须带驱动名。
 
@@ -234,18 +241,18 @@ npm run dev
 
 除注册、登录与根路径外，其余接口都需要 `Authorization: Bearer <token>`。
 
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| `POST` | `/auth/register` | 注册（JSON：username / password / email） |
-| `POST` | `/auth/token` | 登录（`application/x-www-form-urlencoded`），返回 `access_token` 与 `user_id` |
-| `POST` | `/chat/send` | 发送消息，返回多智能体最终回复 |
-| `POST` | `/conversations/create` | 新建会话（前端生成 id） |
-| `GET` | `/conversations/list?user_id=` | 会话列表 |
-| `GET` | `/conversations/get?conversation_id=` | 会话详情（含历史消息） |
-| `DELETE` | `/conversations/delete?conversation_id=` | 删除会话 |
-| `POST` | `/documents/upload` | 上传 PDF 病历（multipart：file / document_type / user_id） |
-| `POST` | `/preferences/save` | 保存偏好（JSON：key / value） |
-| `GET` | `/preferences/list` | 读取偏好 |
+| 方法       | 路径                                       | 说明                                                                    |
+| -------- | ---------------------------------------- | --------------------------------------------------------------------- |
+| `POST`   | `/auth/register`                         | 注册（JSON：username / password / email）                                  |
+| `POST`   | `/auth/token`                            | 登录（`application/x-www-form-urlencoded`），返回 `access_token` 与 `user_id` |
+| `POST`   | `/chat/send`                             | 发送消息，返回多智能体最终回复                                                       |
+| `POST`   | `/conversations/create`                  | 新建会话（前端生成 id）                                                         |
+| `GET`    | `/conversations/list?user_id=`           | 会话列表                                                                  |
+| `GET`    | `/conversations/get?conversation_id=`    | 会话详情（含历史消息）                                                           |
+| `DELETE` | `/conversations/delete?conversation_id=` | 删除会话                                                                  |
+| `POST`   | `/documents/upload`                      | 上传 PDF 病历（multipart：file / document_type / user_id）                   |
+| `POST`   | `/preferences/save`                      | 保存偏好（JSON：key / value）                                                |
+| `GET`    | `/preferences/list`                      | 读取偏好                                                                  |
 
 登录示例：
 
@@ -269,7 +276,7 @@ curl -X POST http://localhost:8000/auth/token \
 
 诚实列出，避免误解：
 
-- **非流式对话**：`/chat/send` 一次性返回全文；前端「打字机」是本地逐字渲染，不是 SSE 流。
+- **非流式对话**：`/chat/send` 一次性返回全文，回复是整段出现，前端**没有**逐字渲染（`startTypeWriter` 是未接入的死代码，SSE 化后再清理）。
 - **单轮路由**：子智能体执行完即结束，不做工具调用的多轮自循环（见设计要点 2）。
 - **PDF 仅支持文本层**：扫描件需先 OCR；正文读取上限 8000 字符。
 - **模型强绑定 DashScope**：换模型需改 `app/agents/base.py` 与 `app/rag/document_extractor.py` 的模型名与 endpoint。
@@ -281,7 +288,7 @@ curl -X POST http://localhost:8000/auth/token \
 - [ ] 对话改为 SSE 流式输出
 - [x] 补充 pytest（已完成 RAG 检索层与转接判断；待补记忆读写、路由决策、PDF 抽取的 mock 测试）
 - [ ] 引入 Alembic 管理表结构变更
-- [ ] PDF 增加 OCR（PaddleOCR / Tesseract）与分块检索（RAG 召回而非截断）
+- [ ] PDF 增加 OCR：扫描件目前没有文本层，`PyPDFLoader` 提取为空，索引不到内容；分块检索已完成（`RecursiveCharacterTextSplitter` + 页码/chunk 元数据）
 - [ ] 前端会话列表虚拟滚动、错误态与空态统一
 - [ ] Docker Compose 增加后端与前端服务，一键起全栈
 
