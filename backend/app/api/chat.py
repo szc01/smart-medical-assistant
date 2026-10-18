@@ -21,6 +21,8 @@ from datetime import datetime
 from app.database.postgres import get_postgres_db
 # 导入用户认证函数（获取当前登录用户）
 from app.api.auth import get_current_user
+# 导入用户归属校验函数（与偏好接口共用，避免复制校验逻辑）
+from app.api.preferences import _resolve_user_id
 # 导入用户 ORM 模型
 from app.models.user import User
 # 导入会话 ORM 模型
@@ -51,12 +53,17 @@ async def send_message(
     # PostgreSQL 数据库会话（依赖注入）
     db: Session = Depends(get_postgres_db)
 ):
+    # 校验请求中的 user_id 与登录态一致，防止越权读写长记忆
+    user_id = _resolve_user_id(request.user_id, current_user)
     # 发送消息接口（非流式，短记忆自动持久化，支持文档上传分析）
     try:
         # 从数据库查询会话记录（根据 thread_id）
         conversation = db.query(Conversation).filter(
             Conversation.id == request.thread_id
         ).first()
+        # 会话归属校验：禁止通过 thread_id 访问他人会话
+        if conversation and conversation.user_id != current_user.id:
+            raise HTTPException(403, "无权访问该会话")
         # 如果会话存在
         if conversation:
             # 更新会话的最后一条消息（截断到50字符，超长则加省略号）
@@ -74,7 +81,7 @@ async def send_message(
             # 用户消息列表（包含当前消息）
             "messages": [HumanMessage(content=request.message)],
             # 用户 ID
-            "user_id": request.user_id,
+            "user_id": user_id,
             # 会话线程 ID
             "thread_id": request.thread_id,
             # 医疗文档列表（初始为空）
@@ -87,7 +94,7 @@ async def send_message(
         config = {
             "configurable": {
                 # 用户 ID（用于长记忆命名空间）
-                "user_id": request.user_id,
+                "user_id": user_id,
                 # 会话线程 ID（用于短记忆隔离）
                 "thread_id": request.thread_id
             }
@@ -129,6 +136,9 @@ async def send_message(
             # HTTP 状态码 200（成功）
             status_code=200
         )
+    except HTTPException:
+        # 归属校验等 HTTPException 直接抛出，避免被兜底包装成 500
+        raise
     except Exception as e:
         # 如果发生未捕获的异常，导入 traceback 模块
         import traceback
