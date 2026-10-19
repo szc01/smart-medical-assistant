@@ -245,8 +245,8 @@ npm run dev
 | `POST`   | `/auth/token`                            | 登录（`application/x-www-form-urlencoded`），返回 `access_token` 与 `user_id` |
 | `POST`   | `/chat/stream`                           | 发送消息，以 SSE（`text/event-stream`）流式返回 meta / token / done / error 事件         |
 | `POST`   | `/chat/send`                             | 发送消息，返回多智能体最终回复；deprecated（保留兼容，将移除），请改用 `/chat/stream`            |
-| `POST`   | `/conversations/create`                  | 新建会话（前端生成 id）                                                         |
-| `GET`    | `/conversations/list?user_id=`           | 会话列表                                                                  |
+| `POST`   | `/conversations/create?user_id=`         | 新建会话（前端生成 id；`user_id` 可省略，服务端以登录态为准，传入他人 ID 返回 403）               |
+| `GET`    | `/conversations/list`                    | 会话列表（仅返回当前登录用户的会话，忽略 `user_id` 查询参数）                                      |
 | `GET`    | `/conversations/get?conversation_id=`    | 会话详情（含历史消息）                                                           |
 | `DELETE` | `/conversations/delete?conversation_id=` | 删除会话                                                                  |
 | `POST`   | `/documents/upload`                      | 上传 PDF 病历（multipart：file / document_type / user_id）                   |
