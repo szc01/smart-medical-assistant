@@ -13,6 +13,7 @@ from langchain_core.messages import AIMessage, SystemMessage
 
 from app.agents.base import get_model
 from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
 
 from app.agents.state import MedicalAgentState
 from app.agents.memory import (
@@ -66,6 +67,10 @@ ATTENDING_DOCTOR_PROMPT = """
 # 主治医生节点：诊断疾病、制定治疗方案、开药建议
 def attending_doctor_node(state: MedicalAgentState):
     """主治医生：诊断疾病、制定治疗方案、开药建议"""
+    try:
+        get_stream_writer()({"type": "agent", "agent": "attending_doctor"})
+    except Exception:
+        pass
     try:
         # 获取聊天模型实例
         model = get_model()

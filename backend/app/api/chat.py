@@ -174,7 +174,7 @@ async def _iter_graph_events(graph, initial_state: dict, config: dict) -> AsyncI
     emitted = False
     try:
         async for mode, payload in graph.astream(
-            initial_state, config=config, stream_mode=["messages", "values"]
+            initial_state, config=config, stream_mode=["messages", "values", "custom"]
         ):
             emitted = True
             yield mode, payload
@@ -200,7 +200,7 @@ async def _iter_graph_events(graph, initial_state: dict, config: dict) -> AsyncI
     def worker() -> None:
         try:
             for item in graph.stream(
-                initial_state, config=config, stream_mode=["messages", "values"]
+                initial_state, config=config, stream_mode=["messages", "values", "custom"]
             ):
                 if stop.is_set():
                     break
@@ -227,6 +227,7 @@ async def event_stream(graph, initial_state: dict, config: dict) -> AsyncIterato
     """把图的执行过程转成 SSE 事件流。graph 参数化是为了能用假图做单测。"""
     sent_any = False
     label_sent = False
+    pending_agent = None
     final_state = None
     total = 0
 
@@ -244,7 +245,7 @@ async def event_stream(graph, initial_state: dict, config: dict) -> AsyncIterato
                     continue
 
                 if not label_sent:
-                    node = meta.get("langgraph_node", "")
+                    node = pending_agent or meta.get("langgraph_node", "")
                     yield _sse({"type": "meta", "agent": node,
                                 "label": AGENT_LABELS.get(node, "")})
                     label_sent = True
@@ -253,6 +254,9 @@ async def event_stream(graph, initial_state: dict, config: dict) -> AsyncIterato
                 total += len(text)
                 yield _sse({"type": "token", "text": text})
 
+            elif mode == "custom":
+                if isinstance(payload, dict) and payload.get("type") == "agent":
+                    pending_agent = payload.get("agent")
             elif mode == "values":
                 final_state = payload
 

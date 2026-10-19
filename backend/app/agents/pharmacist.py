@@ -14,6 +14,7 @@ from langchain_core.messages import AIMessage, SystemMessage
 
 from app.agents.base import get_model
 from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
 
 from app.agents.state import MedicalAgentState
 from app.agents.memory import (
@@ -66,6 +67,10 @@ PHARMACIST_PROMPT = """
 # 药师节点：药品咨询、用药指导、药物副作用、药品替代
 def pharmacist_node(state: MedicalAgentState):
     """药师：药品咨询、用药指导、药物副作用、药品替代"""
+    try:
+        get_stream_writer()({"type": "agent", "agent": "pharmacist"})
+    except Exception:
+        pass
     try:
         # 获取聊天模型实例
         model = get_model()

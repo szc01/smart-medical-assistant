@@ -11,6 +11,7 @@ from langchain_core.messages import AIMessage
 
 from app.agents.base import get_model
 from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
 
 from app.agents.state import MedicalAgentState
 from app.agents.memory import (
@@ -84,6 +85,10 @@ MEDICAL_EXAMINER_PROMPT = """
 # 体检员节点：收集用户基本信息、症状、病史、过敏史等
 def medical_examiner_node(state: MedicalAgentState):
     """体检员：收集用户基本信息、症状、病史、过敏史等"""
+    try:
+        get_stream_writer()({"type": "agent", "agent": "medical_examiner"})
+    except Exception:
+        pass
     try:
         # 从状态中获取消息列表
         messages = state["messages"]

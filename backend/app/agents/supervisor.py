@@ -10,6 +10,7 @@ from langchain_core.messages import AIMessage, SystemMessage
 
 from app.agents.base import get_model
 from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
 
 from app.agents.state import MedicalAgentState
 from app.agents.memory import (
@@ -83,6 +84,10 @@ SUPERVISOR_PROMPT = """
 # 监督者节点：负责路由决策和导诊（私人医疗顾问）
 def supervisor_node(state: MedicalAgentState):
     """私人医疗顾问 = 监督者 + 导诊"""
+    try:
+        get_stream_writer()({"type": "agent", "agent": "supervisor"})
+    except Exception:
+        pass
     try:
         # 获取聊天模型实例
         model = get_model()
