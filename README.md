@@ -335,6 +335,6 @@ curl -X POST http://localhost:8000/auth/token \
 
 ## License
 
-[MIT](LICENSE) © 2026 随治诚
+[MIT](LICENSE) © 2026 szc01
 
 安全问题请按 [SECURITY.md](SECURITY.md) 私下报告；贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
