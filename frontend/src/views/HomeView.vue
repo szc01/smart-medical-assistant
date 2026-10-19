@@ -5,11 +5,14 @@ import { Upload, Document, Message as MessageIcon, Close, Plus, Delete } from '@
 import { marked } from 'marked'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
+import { streamChat } from '../utils/streamChat'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  agentLabel?: string
+  isError?: boolean
 }
 
 interface ApiMessage {
@@ -321,11 +324,15 @@ const handleLogout = () => {
   ElMessage.success('已登出')
 }
 
+// 后端历史消息带【角色名】前缀，渲染前统一剥离，避免与前端角色标签重复
+const stripRolePrefix = (s: string) => s.replace(/^【[^】]{1,10}】\s*/, '')
+
 // 转换Markdown为HTML
-const renderContent = (content: string) => {
-  if (!content) return ''
+const renderContent = (content: string, role: Message['role']) => {
+  const cleaned = role === 'assistant' ? stripRolePrefix(content) : content
+  if (!cleaned) return ''
   
-  console.log('[renderContent] 原始 Markdown 内容:', content)
+  console.log('[renderContent] 原始 Markdown 内容:', cleaned)
   
   // 配置marked库
   const markedOptions = {
@@ -338,7 +345,7 @@ const renderContent = (content: string) => {
   
   // 直接渲染，不做额外预处理
   // 后端返回的内容已经有正确的 Markdown 格式
-  const html = marked(content, markedOptions)
+  const html = marked(cleaned, markedOptions)
   console.log('[renderContent] 渲染后的 HTML:', html)
   
   return html
@@ -418,60 +425,70 @@ const handleSend = async () => {
     return // 不发送到后端
   }
 
-  try {
+  const assistantMessageId = messages.value.length
+  messages.value.push({
+    role: 'assistant',
+    content: '',
+    timestamp: new Date()
+  })
+  const assistantMessage = messages.value[assistantMessageId]
+  scrollToBottom()
 
+  const streamState: { error: string | null } = { error: null }
 
-    const assistantMessageId = messages.value.length
-    messages.value.push({
-      role: 'assistant',
-      content: '',
-      timestamp: new Date()
-    })
+  const markAssistantError = (detail: string) => {
+    if (!assistantMessage) return
+    assistantMessage.content = '抱歉，回复生成失败，请重试。'
+    assistantMessage.isError = true
+    assistantMessage.timestamp = new Date()
+    console.error('发送消息失败:', detail)
+    ElMessage.error('发送消息失败，请重试')
     scrollToBottom()
+  }
 
+  try {
     const token = localStorage.getItem('token')
-    const response = await fetch(`${backendUrl}/chat/send`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
+    await streamChat({
+      url: `${backendUrl}/chat/stream`,
+      token: token || '',
+      body: {
         user_id: userId.value,
         message: userMessage,
         thread_id: threadId.value
-      })
+      },
+      handlers: {
+        onMeta: (_agent, label) => {
+          if (assistantMessage && label) {
+            assistantMessage.agentLabel = label
+          }
+        },
+        onToken: (text) => {
+          if (!assistantMessage) return
+          assistantMessage.content += text
+          scrollToBottom()
+        },
+        onError: (detail) => {
+          streamState.error = detail
+        }
+      }
     })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    if (streamState.error !== null) {
+      markAssistantError(streamState.error)
+    } else if (assistantMessage) {
+      assistantMessage.timestamp = new Date()
     }
 
-    // 解析 JSON 响应（非流式）
-    const data = await response.json()
-    
-    if (data.success && data.message) {
-      // 一次性更新消息内容
-      const lastMessage = messages.value[messages.value.length - 1]
-      if (lastMessage && lastMessage.role === 'assistant') {
-        messages.value[messages.value.length - 1] = {
-          ...lastMessage,
-          content: data.message,
-          timestamp: new Date()
-        }
-        await nextTick()
-        scrollToBottom()
-      }
-    }
-    
+    await nextTick()
+    scrollToBottom()
+
     // 消息保存由后端自动处理，前端无需调用 save_message 接口
     // 长短记忆持久化由后端 LangGraph 自动完成
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       console.log('请求已取消')
     } else {
-      console.error('发送消息失败:', error)
-      ElMessage.error('发送消息失败，请重试')
+      markAssistantError(error instanceof Error ? error.message : String(error))
     }
   } finally {
     // 更新会话信息
@@ -749,13 +766,13 @@ onMounted(() => {
             v-for="(msg, index) in messages"
             :key="`msg-${index}-${msg.timestamp.getTime()}`"
             class="message"
-            :class="`message-${msg.role}`"
+            :class="[`message-${msg.role}`, { 'message-error': msg.isError }]"
           >
             <div class="message-content">
               <div class="message-role">
-                {{ msg.role === 'user' ? '我' : '医疗助手' }}
+                {{ msg.role === 'user' ? '我' : (msg.agentLabel || '医疗助手') }}
               </div>
-              <div class="message-text" v-html="renderContent(msg.content)"></div>
+              <div class="message-text" v-html="renderContent(msg.content, msg.role)"></div>
               <div class="message-time">
                 {{ msg.timestamp.toLocaleTimeString() }}
               </div>
@@ -1149,6 +1166,15 @@ onMounted(() => {
   border: 1px solid rgba(50, 200, 255, 0.2);
   border-bottom-left-radius: 4px;
   box-shadow: 0 4px 15px rgba(50, 200, 255, 0.15);
+}
+
+.message-error {
+  border-color: rgba(255, 87, 34, 0.5);
+  box-shadow: 0 4px 15px rgba(255, 87, 34, 0.15);
+}
+
+.message-error .message-role {
+  color: #ff5722;
 }
 
 .message-role {
