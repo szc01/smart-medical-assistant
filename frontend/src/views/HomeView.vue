@@ -254,6 +254,7 @@ const processDocumentWithAI = async (fileName: string, documentType: string) => 
   const userMessage = `我上传了一份医疗文档：${fileName}（类型：${documentType}），请分析并提取其中的关键信息。`
   const assistantMessage = messages.value[messages.value.length - 1]
   const streamState: { error: string | null } = { error: null }
+  let firstToken = true
 
   const markAssistantError = (detail: string) => {
     console.error('AI 分析文档失败:', detail)
@@ -276,7 +277,15 @@ const processDocumentWithAI = async (fileName: string, documentType: string) => 
         thread_id: threadId.value
       },
       handlers: {
+        onMeta: (_agent, label) => {
+          if (assistantMessage && label) assistantMessage.agentLabel = label
+        },
         onToken: (text) => {
+          if (firstToken) {
+            firstToken = false
+            isUploading.value = false
+            uploadProgress.value = 100
+          }
           if (!assistantMessage || assistantMessage.role !== 'assistant') return
           assistantMessage.content += text
           scrollToBottom()
