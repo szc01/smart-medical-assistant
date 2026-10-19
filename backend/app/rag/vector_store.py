@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 80
 MAX_K = 10
+# 由 8 个相关问题 + 6 个无关问题标定：保留全部相关 top1 的最高阈值
+SCORE_THRESHOLD = 0.43
 CHROMA_ROOT: Path = Path(__file__).resolve().parents[2] / "storage" / "chroma"
 
 DASHSCOPE_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
@@ -145,15 +147,20 @@ def search(
         k = max(1, min(int(k), MAX_K))
         store = get_vector_store(user_id, embedding_function=embedding_function)
         results = store.similarity_search_with_score(query, k=k)
-        return [
-            {
-                "content": document.page_content,
-                "filename": document.metadata.get("filename", ""),
-                "page": document.metadata.get("page", 0),
-                "score": round(1 - float(distance), 4),
-            }
-            for document, distance in results
-        ]
+        hits = []
+        for document, distance in results:
+            score = 1 - float(distance)
+            if score < SCORE_THRESHOLD:
+                continue
+            hits.append(
+                {
+                    "content": document.page_content,
+                    "filename": document.metadata.get("filename", ""),
+                    "page": document.metadata.get("page", 0),
+                    "score": round(score, 4),
+                }
+            )
+        return hits
     except Exception as exc:
         logger.warning("向量检索失败（user_id=%s）：%s", user_id, exc)
         return []

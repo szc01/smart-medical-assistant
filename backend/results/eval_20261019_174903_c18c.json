@@ -1,0 +1,247 @@
+{
+  "meta": {
+    "brief": "P0-1",
+    "run_id": "20261019_174903_c18c",
+    "started_at": "2026-10-19T17:49:03",
+    "finished_at": "2026-10-19T17:50:20",
+    "base_url": "http://127.0.0.1:8001",
+    "selected_classes": [
+      "C"
+    ],
+    "accounts": {
+      "a": {
+        "username": "eval_a_20261019_174903_c18c",
+        "user_id": 57,
+        "memory_id": "user_57"
+      },
+      "b": {
+        "username": "eval_b_20261019_174903_c18c",
+        "user_id": 58,
+        "memory_id": "user_58"
+      }
+    },
+    "report": {
+      "filename": "eval_report.pdf",
+      "pages": [
+        "姓名：张三  年龄：45 岁  性别：男\n主诉：口干、多饮两周。既往史：高血压 5 年，规律服药。\n过敏史：青霉素过敏。",
+        "空腹血糖 6.2 mmol/L；血红蛋白 13.7 g/dL；ALT 58 U/L；肌酐 88 μmol/L。\n结论：血糖偏高，建议复查糖化血红蛋白。"
+      ],
+      "indexed_chunks": 2,
+      "long_term_memory_saved": [
+        "基本信息: name: 张三, age: 45, gender: 男",
+        "医疗信息: 症状: 口干、多饮两周\n既往病史: 高血压 5 年，规律服药\n过敏史: 青霉素过敏\n检查结果: 空腹..."
+      ],
+      "long_term_memory_record": {
+        "basic_info": {
+          "name": "张三",
+          "age": 45,
+          "gender": "男"
+        },
+        "symptoms": [
+          "口干、多饮两周"
+        ],
+        "medical_history": [
+          "高血压 5 年，规律服药"
+        ],
+        "allergies": [
+          "青霉素过敏"
+        ],
+        "test_results": [
+          "空腹血糖 6.2 mmol/L",
+          "血红蛋白 13.7 g/dL",
+          "ALT 58 U/L",
+          "肌酐 88 μmol/L",
+          "结论：血糖偏高，建议复查糖化血红蛋白"
+        ]
+      }
+    },
+    "thread_strategy": {
+      "A": "每题独立线程",
+      "B": "共享 A 的会话",
+      "C": "每题独立线程",
+      "D": "每题独立线程",
+      "E": "使用 A 的会话 + 独立线程"
+    },
+    "eval_duration_s": 71.54,
+    "total_duration_s": 76.78,
+    "thread_ids": [
+      "20261019_174903_c18c_C1",
+      "20261019_174903_c18c_C2",
+      "20261019_174903_c18c_C3",
+      "20261019_174903_c18c_C4",
+      "20261019_174903_c18c_C5",
+      "20261019_174903_c18c_C6",
+      "eval_conv_20261019_174903_c18c"
+    ]
+  },
+  "summary": [
+    {
+      "class": "C",
+      "label": "无关不硬扯",
+      "passed": 5,
+      "total": 6,
+      "rate": 83.3
+    }
+  ],
+  "total": {
+    "passed": 5,
+    "total": 6,
+    "rate": 83.3
+  },
+  "cases": [
+    {
+      "id": "C1",
+      "class": "C",
+      "input": "感冒了能吃什么",
+      "expected": "不含 6.2/13.7/58/88/张三",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "您好，关于感冒期间的饮食建议，这属于医疗指导范畴，我作为体检员无法提供具体建议。 建议您咨询医生或药师，他们会根据您的具体情况（您有高血压病史、血糖偏高）给出合…",
+      "answer": "您好，关于感冒期间的饮食建议，这属于医疗指导范畴，我作为体检员无法提供具体建议。\n\n建议您咨询医生或药师，他们会根据您的具体情况（您有高血压病史、血糖偏高）给出合适的饮食指导。\n\n请问您感冒有哪些具体症状？持续多久了？这些信息我可以帮您记录下来，方便医生后续诊疗。\n\n您也可以点击下方的「上传医疗文档」按钮，上传病历或体检报告，系统会自动提取信息。",
+      "meta_agent": "medical_examiner",
+      "http_status": 200,
+      "duration_s": 9.87,
+      "extra": {
+        "blacklist_hits": []
+      }
+    },
+    {
+      "id": "C2",
+      "class": "C",
+      "input": "今天天气怎么样",
+      "expected": "不含 6.2/13.7/58/88/张三",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "联网检索暂时不可用，请基于已知医学知识回答您好，张先生。我是您的私人医疗顾问。 抱歉，我主要负责您的健康咨询与导诊服务，无法提供天气信息。 请问您今天联系我是因…",
+      "answer": "联网检索暂时不可用，请基于已知医学知识回答您好，张先生。我是您的私人医疗顾问。\n\n抱歉，我主要负责您的健康咨询与导诊服务，无法提供天气信息。\n\n请问您今天联系我是因为之前的血糖复查结果有疑虑，还是身体出现了新的不适症状？",
+      "meta_agent": "supervisor",
+      "http_status": 200,
+      "duration_s": 8.26,
+      "extra": {
+        "blacklist_hits": []
+      }
+    },
+    {
+      "id": "C3",
+      "class": "C",
+      "input": "推荐一部电影",
+      "expected": "不含 6.2/13.7/58/88/张三",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "张先生您好，我是您的私人医疗顾问，主要负责医疗健康方面的导诊和协调服务。 电影推荐不在我的服务范围内。请问您今天有什么健康方面的问题需要咨询吗？比如您之前的血糖…",
+      "answer": "张先生您好，我是您的私人医疗顾问，主要负责医疗健康方面的导诊和协调服务。\n\n电影推荐不在我的服务范围内。请问您今天有什么健康方面的问题需要咨询吗？比如您之前的血糖复查情况，或者有其他身体不适的症状？",
+      "meta_agent": "supervisor",
+      "http_status": 200,
+      "duration_s": 4.34,
+      "extra": {
+        "blacklist_hits": []
+      }
+    },
+    {
+      "id": "C4",
+      "class": "C",
+      "input": "怎么减肥比较健康",
+      "expected": "不含 6.2/13.7/58/88/张三",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "张先生您好，我是您的私人医疗顾问。 看到您有高血压病史，近期血糖也偏高，这些情况在制定减肥方案时需要特别考虑。 想先了解一下： 1. 您目前的身高体重是多少？希…",
+      "answer": "张先生您好，我是您的私人医疗顾问。\n\n看到您有高血压病史，近期血糖也偏高，这些情况在制定减肥方案时需要特别考虑。\n\n想先了解一下：\n1. 您目前的身高体重是多少？希望减重多少？\n2. 是否有运动习惯或饮食方面的特殊限制？\n\n考虑到您的健康状况，建议后续由体检员为您收集详细信息，再由医生制定个性化的健康减重方案。",
+      "meta_agent": "supervisor",
+      "http_status": 200,
+      "duration_s": 5.62,
+      "extra": {
+        "blacklist_hits": []
+      }
+    },
+    {
+      "id": "C5",
+      "class": "C",
+      "input": "阿司匹林有什么副作用",
+      "expected": "不含 6.2/13.7/58/88/张三",
+      "passed": false,
+      "reasons": [
+        "命中禁用值「58」"
+      ],
+      "reason": "命中禁用值「58」",
+      "answer_preview": "联网检索暂时不可用，请基于已知医学知识回答阿司匹林常见副作用及注意事项： **常见副作用：** 1. **胃肠道反应**：胃痛、恶心、胃溃疡，严重可致胃出血 2…",
+      "answer": "联网检索暂时不可用，请基于已知医学知识回答阿司匹林常见副作用及注意事项：\n\n**常见副作用：**\n1. **胃肠道反应**：胃痛、恶心、胃溃疡，严重可致胃出血\n2. **出血风险**：牙龈出血、鼻出血、皮下瘀斑，手术前需停药\n3. **过敏反应**：皮疹、哮喘（虽您青霉素过敏，但阿司匹林过敏需单独注意）\n4. **肝功能影响**：您ALT 58 U/L轻度升高，长期服用需监测肝功能\n5. **其他**：耳鸣、头晕（大剂量时）\n\n**用药前请确认：**\n- 是否有胃溃疡、胃出血史？\n- 是否有出血性疾病或正在服用抗凝药（如华法林）？\n- 是否有哮喘或阿司匹林过敏史？\n- 是否近期有手术计划？\n\n**服用建议：**\n- 饭后服用减少胃刺激\n- 避免与布洛芬等NSAIDs同用\n- 长期服用需定期查血常规、肝功能\n\n您有高血压病史，若医生开具阿司匹林用于心血管预防，请确认无上述禁忌。有胃病建议配合胃药或改用肠溶片。\n\n需要我帮您确认具体用法用量吗？",
+      "meta_agent": "pharmacist",
+      "http_status": 200,
+      "duration_s": 18.03,
+      "extra": {
+        "blacklist_hits": [
+          "58"
+        ]
+      }
+    },
+    {
+      "id": "C6",
+      "class": "C",
+      "input": "我昨晚没睡好怎么办",
+      "expected": "不含 6.2/13.7/58/88/张三",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "张先生您好，我是您的医疗顾问。 睡眠不好确实会影响身体状态。想了解一下： 1. 昨晚是入睡困难、容易醒，还是醒得早？ 2. 这种情况是偶尔发生，还是最近经常这样…",
+      "answer": "张先生您好，我是您的医疗顾问。\n\n睡眠不好确实会影响身体状态。想了解一下：\n\n1. 昨晚是入睡困难、容易醒，还是醒得早？\n2. 这种情况是偶尔发生，还是最近经常这样？\n\n如果睡眠问题持续存在，我会帮您安排体检员进一步评估，看看是否与血压、血糖或其他因素有关。",
+      "meta_agent": "supervisor",
+      "http_status": 200,
+      "duration_s": 4.57,
+      "extra": {
+        "blacklist_hits": []
+      }
+    }
+  ],
+  "cleanup": {
+    "counts": {
+      "users": 2,
+      "conversations": 1,
+      "documents": 0,
+      "checkpoints_rows": 97,
+      "store_rows": 3,
+      "chroma": 0,
+      "uploads": 0
+    },
+    "verification": {
+      "users": {
+        "eval": 0,
+        "global": 0
+      },
+      "conversations": {
+        "eval": 0,
+        "global": 0
+      },
+      "medical_documents": {
+        "eval": 0,
+        "global": 0
+      },
+      "checkpoint_rows": 0,
+      "store_rows": 0,
+      "chroma": {
+        "eval": 1,
+        "global": 1
+      },
+      "uploads": {
+        "eval": 0,
+        "global": 0
+      }
+    },
+    "residual": [
+      "chroma:D:\\smart-medical-assistant\\backend\\storage\\chroma\\user_57_0cb04a23ef"
+    ],
+    "errors": [
+      "删除目录 D:\\smart-medical-assistant\\backend\\storage\\chroma\\user_57_0cb04a23ef 失败: [WinError 32] 另一个程序正在使用此文件，进程无法访问。: 'D:\\\\smart-medical-assistant\\\\backend\\\\storage\\\\chroma\\\\user_57_0cb04a23ef\\\\2f980087-179f-4df2-98f6-5a9e9a8f72f0\\\\data_level0.bin'（若为 WinError 32，通常是后端进程仍持有 Chroma 文件，需重启后端后清理）"
+    ]
+  },
+  "console_table": "=== 评测结果 2026-10-19 17:50 ===\nC 无关不硬扯    5/6    83.3%   ← C5 命中禁用值「58」\n------------------------------------\n合计             5/6    83.3%   耗时 1m12s",
+  "notes": [
+    "B 类先调用 save_extracted_info_to_store 写入长记忆，再用 index_pages 建索引；仍未覆盖上传→PDF 解析→索引链路。",
+    "B4/B8 不要求页码（由 medical_examiner / supervisor 处理，不检索）；B5/B6/B7 保留页码要求。",
+    "判据为字符串包含/边界正则，不使用 LLM 裁判。",
+    "D 类主判据只看报告特征值；无数据表述降为备注字段，不参与判定。回答原文已全部写入 JSON 供人工复核。"
+  ]
+}

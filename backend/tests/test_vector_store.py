@@ -102,6 +102,7 @@ def test_search_clamps_out_of_range_k(monkeypatch, fake_embedding) -> None:
     assert indexed == 3
 
     monkeypatch.setattr(vector_store, "MAX_K", 2)
+    monkeypatch.setattr(vector_store, "SCORE_THRESHOLD", -1.0)
     assert (
         len(
             vector_store.search(
@@ -117,6 +118,22 @@ def test_search_clamps_out_of_range_k(monkeypatch, fake_embedding) -> None:
             )
         )
         == 1
+    )
+
+
+def test_search_filters_below_threshold(monkeypatch, fake_embedding) -> None:
+    vector_store.index_pages(
+        "user_threshold",
+        [(1, "第一页：空腹血糖 6.2 mmol/L。")],
+        "体检报告.pdf",
+        embedding_function=fake_embedding,
+    )
+    monkeypatch.setattr(vector_store, "SCORE_THRESHOLD", 2.0)
+    assert (
+        vector_store.search(
+            "user_threshold", "血糖", embedding_function=fake_embedding
+        )
+        == []
     )
 
 
