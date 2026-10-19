@@ -37,6 +37,7 @@
 | 用户体系   | 注册、登录、bcrypt 密码哈希、JWT 鉴权，路由级登录守卫                            |
 | 偏好设置   | 回答风格、过敏史等偏好写入长记忆，与对话流程共用同一份存储                               |
 | 联网检索   | 通过 Tavily 为智能体提供实时信息检索工具                                    |
+| 流式响应   | `/chat/stream` 走 SSE，token 级增量返回；首 token 延迟 3–5 s（路由关闭 thinking 后从 12–16 s 降下来） |
 
 ## 架构
 
@@ -66,12 +67,13 @@ flowchart LR
 一次请求的完整链路：
 
 ```
-POST /chat/send
+POST /chat/stream
   → 校验 JWT，更新会话 last_message
   → 组装初始 State（messages / user_id / thread_id）
-  → graph.invoke()：supervisor 先读长记忆 → LLM 输出单词语义路由
-  → 命中子智能体：该节点带自己的 system prompt + 工具执行
-  → 子节点执行完 → END，返回最终文本
+  → graph.astream(stream_mode=["messages","values","custom"])：
+      supervisor 先读长记忆 → LLM 输出单词语义路由 → 命中子智能体
+      节点入口发 custom 事件（角色名）→ 该节点带自己的 system prompt + 工具执行
+  → token 级 SSE 推送给前端，子节点执行完 → END
   → 短记忆由 checkpointer 自动落库（无需手写 INSERT）
 ```
 
@@ -275,7 +277,6 @@ curl -X POST http://localhost:8000/auth/token \
 
 诚实列出，避免误解：
 
-- **流式对话**：前端通过 `/chat/stream`（SSE）接收回复并增量渲染；`/chat/send` 仅保留兼容，后续将移除。
 - **单轮路由**：子智能体执行完即结束，不做工具调用的多轮自循环（见设计要点 2）。
 - **PDF 仅支持文本层**：扫描件需先 OCR；正文读取上限 8000 字符。
 - **模型强绑定 DashScope**：换模型需改 `app/agents/base.py` 与 `app/rag/document_extractor.py` 的模型名与 endpoint。
@@ -284,7 +285,7 @@ curl -X POST http://localhost:8000/auth/token \
 
 ## Roadmap
 
-- [ ] 对话改为 SSE 流式输出
+- [x] 对话改为 SSE 流式输出
 - [x] 补充 pytest（已完成 RAG 检索层与转接判断；待补记忆读写、路由决策、PDF 抽取的 mock 测试）
 - [ ] 引入 Alembic 管理表结构变更
 - [ ] PDF 增加 OCR：扫描件目前没有文本层，`PyPDFLoader` 提取为空，索引不到内容；分块检索已完成（`RecursiveCharacterTextSplitter` + 页码/chunk 元数据）
