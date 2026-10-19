@@ -120,7 +120,8 @@ def save_user_long_memory(store, namespace: tuple, item_id: str, data: dict):
 
 
 # 获取用户的长期记忆（个人信息、医疗记录等）
-def get_user_long_memory(user_id: str, store=None) -> str:
+# include_test_results=False 时跳过「检查结果」，避免报告数值进入闲聊/用药上下文
+def get_user_long_memory(user_id: str, store=None, include_test_results: bool = False) -> str:
     # 如果未传入 store，使用全局长记忆存储器
     if store is None:
         store = get_long_term_memory()
@@ -164,6 +165,10 @@ def get_user_long_memory(user_id: str, store=None) -> str:
                 category = item.value.get("category", "unknown")
                 # 获取内容
                 content = item.value.get("content", "")
+                
+                # 检查数值默认不进入用户画像
+                if category == "检查结果" and not include_test_results:
+                    continue
                 
                 # 如果类别不存在，初始化为空列表
                 if category not in medical_by_category:

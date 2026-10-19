@@ -132,7 +132,7 @@ def save_extracted_info_to_store(store, user_id: str, record: MedicalRecord, fil
         saved_items.append(f"基本信息: {basic_text}")
         print(f"[INFO] 已保存用户信息到长记忆")
     
-    # 2. 保存医疗信息（所有医疗相关字段）
+    # 2. 保存医疗信息（画像字段，不含检查数值）
     medical_parts = []
     
     # 定义医疗字段映射（字段名 -> 显示名称）
@@ -142,7 +142,6 @@ def save_extracted_info_to_store(store, user_id: str, record: MedicalRecord, fil
         "allergies": ("过敏史", record.allergies),
         "diagnoses": ("诊断结果", record.diagnoses),
         "medications": ("用药记录", record.medications),
-        "test_results": ("检查结果", record.test_results),
         "doctor_notes": ("医生备注", record.doctor_notes)
     }
     
@@ -168,5 +167,23 @@ def save_extracted_info_to_store(store, user_id: str, record: MedicalRecord, fil
         })
         saved_items.append(f"医疗信息: {medical_text[:50]}...")
         print(f"[INFO] 已保存 {len(medical_parts)} 项医疗信息到长记忆")
+    
+    # 3. 检查数值单独保存，避免被当作用户画像无条件注入
+    if record.test_results:
+        test_items = record.test_results
+        if isinstance(test_items, str):
+            test_items = [test_items]
+        elif not isinstance(test_items, list):
+            test_items = []
+        test_text = "; ".join([str(item) for item in test_items if item is not None])
+        if test_text:
+            namespace = ("user_medical_history", user_id)
+            store.put(namespace, f"test_results_{filename}", {
+                "category": "检查结果",
+                "content": test_text,
+                "source": f"文档: {filename}"
+            })
+            saved_items.append(f"检查结果: {test_text[:50]}...")
+            print(f"[INFO] 已保存检查结果到长记忆")
     
     return saved_items
