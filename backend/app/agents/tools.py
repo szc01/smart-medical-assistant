@@ -13,6 +13,7 @@ from app.config.settings import settings
 from app.agents.memory import get_long_term_memory
 import json
 import logging
+import re
 import uuid
 
 
@@ -21,6 +22,37 @@ logger = logging.getLogger(__name__)
 
 # 初始化 Tavily 客户端（联网搜索工具）
 tavily = TavilyClient(api_key=settings.TAVILY_API_KEY)
+
+# Tavily 返回的是网页正文，单条常有一两千字。整段塞给模型会被原样复述（实测回答从 400 字涨到 4500 字），
+# 所以在工具层就压缩——从源头控制输入体量，比在 prompt 里要求"精简"可靠。
+SEARCH_MAX_RESULTS = 3
+SEARCH_MAX_CHARS = 300        # 降级路径：每条正文的上限
+SEARCH_ANSWER_MAX_CHARS = 500  # 优先路径：Tavily 生成的摘要上限
+
+
+def _clip(text: str, limit: int = SEARCH_MAX_CHARS) -> str:
+    """按句读边界截断，避免把一句话切成两半。"""
+    text = (text or "").strip()
+    if len(text) <= limit:
+        return text
+    head = text[:limit]
+    for sep in ("。", "；", "！", "？", ".", ";", "!", "?"):
+        idx = head.rfind(sep)
+        if idx >= limit // 2:
+            return head[: idx + 1]
+    return head + "…"
+
+
+def _is_chinese_text(text: str, threshold: float = 0.2) -> bool:
+    """判断文本是否以中文为主。
+
+    检索结果里常有港台/WHO 的英文页面，段内容夹少量中文专名（如"疫苗可預防疾病科學委員會"）
+    也会被误判成中文，所以看汉字占比而不是"是否含汉字"。
+    """
+    if not text:
+        return False
+    cn = len(re.findall(r"[\u4e00-\u9fff]", text))
+    return cn / len(text) >= threshold
 
 
 @tool
@@ -31,9 +63,31 @@ def search_web(query: str) -> str:
     当用户需要最新信息、新闻、医疗资讯等时使用此工具
     """
     try:
-        result = tavily.search(query, max_results=3)
-        summaries = [item["content"] for item in result.get("results", [])]
-        return "\n".join(summaries) if summaries else "未找到相关信息"
+        result = tavily.search(
+            query,
+            max_results=SEARCH_MAX_RESULTS,
+            include_answer=True,
+        )
+
+        # 只用中文资料：模型拿到英文原文会整段照抄（实测输出过 "The sources indicate that..."），
+        # 在工具返回值里夹"请用中文"的指令也没用——模型会把指令当资料一起复述。
+        # 所以在这一层就把非中文内容滤掉，让模型根本没有可抄的英文。
+        items = result.get("results", [])[:SEARCH_MAX_RESULTS]
+        cn_snippets = [
+            _clip(item.get("content") or "")
+            for item in items
+            if _is_chinese_text(item.get("content") or "")
+        ]
+        cn_snippets = [s for s in cn_snippets if s]
+        if cn_snippets:
+            return "\n".join(f"- {s}" for s in cn_snippets)
+
+        answer = (result.get("answer") or "").strip()
+        if answer and _is_chinese_text(answer):
+            return _clip(answer, SEARCH_ANSWER_MAX_CHARS)
+
+        # 全是外文资料：宁可说没有，也不要把英文段落丢给中文对话
+        return "未找到可靠的中文资料，建议告知用户咨询专业医疗机构或查阅官方指南"
     except Exception as e:
         logger.warning("联网检索失败: %s", e)
         return "联网检索暂时不可用，请基于已知医学知识回答"
