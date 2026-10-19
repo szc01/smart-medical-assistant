@@ -7,7 +7,6 @@
 - 药品替代方案
 """
 
-import logging
 import uuid
 
 from langchain_core.messages import AIMessage, SystemMessage
@@ -23,14 +22,6 @@ from app.agents.memory import (
     save_user_long_memory
 )
 from app.agents.tools import search_web, save_medical_info
-from app.rag.context import (
-    REFERENCE_MESSAGE_ID,
-    build_reference_block,
-    last_human_text,
-)
-from app.rag.vector_store import search
-
-logger = logging.getLogger(__name__)
 
 
 # 药师提示词
@@ -96,21 +87,6 @@ def pharmacist_node(state: MedicalAgentState):
             # 将系统消息插入到消息列表最前面
             messages = [system_message] + messages
 
-        # 检索该用户病历，命中时仅以 SystemMessage 注入本次调用，不写入 state
-        reference_message = None
-        try:
-            query = last_human_text(state["messages"])
-            hits = search(user_id, query, k=4)
-            block = build_reference_block(hits)
-            if block:
-                reference_message = SystemMessage(
-                    content=block,
-                    id=REFERENCE_MESSAGE_ID,
-                )
-                messages = [reference_message] + messages
-        except Exception as exc:
-            logger.warning("病历检索失败（user_id=%s）：%s", user_id, exc)
-
         # 创建药师智能体（包含联网搜索、保存医疗信息工具）
         agent = create_agent(
             model=model,
@@ -124,14 +100,6 @@ def pharmacist_node(state: MedicalAgentState):
         response = agent.invoke({"messages": messages}, config=config)
         
         response_messages = response["messages"]
-        # 参考片段只服务本次调用，返回状态前剔除，避免写入 checkpoint 后逐轮重放
-        if reference_message is not None:
-            response_messages = [
-                message
-                for message in response_messages
-                if message is not reference_message
-                and getattr(message, "id", None) != REFERENCE_MESSAGE_ID
-            ]
 
         # 如果有响应消息，添加角色前缀并保存处方信息
         if response_messages:

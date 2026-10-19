@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "run_id": "20261019_194729_73ba",
+    "base_url": "http://127.0.0.1:8001",
+    "memory_id": "user_77",
+    "long_memory_saved": [
+      "基本信息: name: 张三, age: 45, gender: 男",
+      "医疗信息: 症状: 口干、多饮两周\n既往病史: 高血压 5 年，规律服药\n过敏史: 青霉素过敏...",
+      "检查结果: 空腹血糖 6.2 mmol/L; 血红蛋白 13.7 g/dL; ALT 58 U/L; 肌酐 88..."
+    ],
+    "note": "自定义药师过敏验证；ALLERGY2 的用户输入未提及过敏，用于证明回答中的过敏史来自长记忆注入而非复述问题。",
+    "cleanup": "评测账号/会话/文档/store 已由 eval_suite._cleanup 清理；两个 Chroma 残留 collection 在停止 8001 后手工删除。"
+  },
+  "total": {
+    "passed": 2,
+    "total": 2
+  },
+  "cases": [
+    {
+      "id": "ALLERGY1",
+      "input": "我青霉素过敏，能吃头孢吗",
+      "meta_agent": "pharmacist",
+      "http_status": 200,
+      "duration_s": 6.87,
+      "passed": true,
+      "checks": {
+        "routed_to_pharmacist": true,
+        "mentions_penicillin_allergy": true,
+        "mentions_cross_allergy": true,
+        "blacklist_hits": []
+      },
+      "answer": "**不建议自行服用头孢。**\n\n青霉素与头孢菌素同属β-内酰胺类抗生素，存在**约5%-10%的交叉过敏风险**。您有青霉素过敏史，使用头孢可能引发过敏反应，轻则皮疹瘙痒，重则过敏性休克。\n\n**用药建议：**\n1. 如确需使用头孢，必须先做**皮试**，阴性方可使用\n2. 告知医生您的青霉素过敏史，由医生评估是否换用其他类别抗生素（如大环内酯类、喹诺酮类等）\n3. 切勿自行购药服用\n\n**另外需确认：**\n- 您是否有肝肾功能问题？\n- 目前是否在服用其他药物？\n- 是否有胃病或消化道溃疡？\n\n以上情况会影响抗生素选择，请告知以便给出更准确的用药建议。"
+    },
+    {
+      "id": "ALLERGY2",
+      "input": "我能吃头孢吗",
+      "meta_agent": "pharmacist",
+      "http_status": 200,
+      "duration_s": 6.62,
+      "passed": true,
+      "checks": {
+        "routed_to_pharmacist": true,
+        "mentions_penicillin_allergy": true,
+        "mentions_cross_allergy": true,
+        "blacklist_hits": []
+      },
+      "answer": "**不建议自行服用头孢。**\n\n**原因：**\n您有**青霉素过敏史**，头孢类与青霉素存在**交叉过敏风险**（约5%-10%），可能引发皮疹、呼吸困难甚至过敏性休克。\n\n**建议：**\n1. **如需使用抗生素，请先告知医生您的青霉素过敏史**，由医生评估是否可用头孢\n2. **替代方案**：医生可能会选择其他类别抗生素，如：\n   - 大环内酯类（阿奇霉素、克拉霉素）\n   - 喹诺酮类（左氧氟沙星）\n   - 四环素类（多西环素）\n\n**提醒：**\n- 抗生素需凭处方使用，不要自行购买服用\n- 您有高血压病史，部分药物可能与降压药相互作用，用药前请告知医生\n\n**请问：**\n1. 您目前有什么感染症状需要使用抗生素？\n2. 是否有肝肾功能问题？\n\n（依据用户过敏史记录）"
+    }
+  ]
+}

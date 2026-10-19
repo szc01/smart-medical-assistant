@@ -1,0 +1,356 @@
+{
+  "meta": {
+    "brief": "P0-1",
+    "run_id": "20261019_194523_1685",
+    "started_at": "2026-10-19T19:45:23",
+    "finished_at": "2026-10-19T19:46:32",
+    "base_url": "http://127.0.0.1:8001",
+    "selected_classes": [
+      "B"
+    ],
+    "accounts": {
+      "a": {
+        "username": "eval_a_20261019_194523_1685",
+        "user_id": 75,
+        "memory_id": "user_75"
+      },
+      "b": {
+        "username": "eval_b_20261019_194523_1685",
+        "user_id": 76,
+        "memory_id": "user_76"
+      }
+    },
+    "report": {
+      "filename": "eval_report.pdf",
+      "pages": [
+        "姓名：张三  年龄：45 岁  性别：男\n主诉：口干、多饮两周。既往史：高血压 5 年，规律服药。\n过敏史：青霉素过敏。",
+        "空腹血糖 6.2 mmol/L；血红蛋白 13.7 g/dL；ALT 58 U/L；肌酐 88 μmol/L。\n结论：血糖偏高，建议复查糖化血红蛋白。"
+      ],
+      "indexed_chunks": 2,
+      "long_term_memory_saved": [
+        "基本信息: name: 张三, age: 45, gender: 男",
+        "医疗信息: 症状: 口干、多饮两周\n既往病史: 高血压 5 年，规律服药\n过敏史: 青霉素过敏...",
+        "检查结果: 空腹血糖 6.2 mmol/L; 血红蛋白 13.7 g/dL; ALT 58 U/L; 肌酐 88..."
+      ],
+      "long_term_memory_record": {
+        "basic_info": {
+          "name": "张三",
+          "age": 45,
+          "gender": "男"
+        },
+        "symptoms": [
+          "口干、多饮两周"
+        ],
+        "medical_history": [
+          "高血压 5 年，规律服药"
+        ],
+        "allergies": [
+          "青霉素过敏"
+        ],
+        "test_results": [
+          "空腹血糖 6.2 mmol/L",
+          "血红蛋白 13.7 g/dL",
+          "ALT 58 U/L",
+          "肌酐 88 μmol/L",
+          "结论：血糖偏高，建议复查糖化血红蛋白"
+        ]
+      }
+    },
+    "thread_strategy": {
+      "A": "每题独立线程",
+      "B": "共享 A 的会话",
+      "C": "每题独立线程",
+      "D": "每题独立线程",
+      "E": "使用 A 的会话 + 独立线程"
+    },
+    "eval_duration_s": 63.6,
+    "total_duration_s": 68.9,
+    "thread_ids": [
+      "eval_conv_20261019_194523_1685"
+    ]
+  },
+  "summary": [
+    {
+      "class": "B",
+      "label": "检索问答",
+      "passed": 8,
+      "total": 8,
+      "rate": 100.0
+    }
+  ],
+  "total": {
+    "passed": 8,
+    "total": 8,
+    "rate": 100.0
+  },
+  "cases": [
+    {
+      "id": "B1",
+      "class": "B",
+      "input": "我报告里的空腹血糖是多少",
+      "expected": "数值 6.2 + 第 2 页",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "您的空腹血糖为 **6.2 mmol/L**（依据《eval_report.pdf》第 2 页）。 该数值高于正常范围（3.9-6.1 mmol/L），结合您口…",
+      "answer": "您的空腹血糖为 **6.2 mmol/L**（依据《eval_report.pdf》第 2 页）。\n\n该数值高于正常范围（3.9-6.1 mmol/L），结合您口干、多饮的症状，提示可能存在糖代谢异常。建议进一步检查糖化血红蛋白（HbA1c）以明确诊断。",
+      "meta_agent": "attending_doctor",
+      "http_status": 200,
+      "duration_s": 6.46,
+      "extra": {
+        "missing_numbers": [],
+        "matched_numbers": [
+          "6.2"
+        ],
+        "number_mode": "all",
+        "page_required": true,
+        "page_ok": true,
+        "numbers": [
+          "6.2"
+        ],
+        "page": 2
+      }
+    },
+    {
+      "id": "B2",
+      "class": "B",
+      "input": "我的血红蛋白是多少",
+      "expected": "数值 13.7 + 第 2 页",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "您的血红蛋白为 **13.7 g/dL**（依据《eval_report.pdf》第 2 页）。 该数值在男性正常参考范围（13.0-17.5 g/dL）内，属…",
+      "answer": "您的血红蛋白为 **13.7 g/dL**（依据《eval_report.pdf》第 2 页）。\n\n该数值在男性正常参考范围（13.0-17.5 g/dL）内，属于正常水平。",
+      "meta_agent": "attending_doctor",
+      "http_status": 200,
+      "duration_s": 6.11,
+      "extra": {
+        "missing_numbers": [],
+        "matched_numbers": [
+          "13.7"
+        ],
+        "number_mode": "all",
+        "page_required": true,
+        "page_ok": true,
+        "numbers": [
+          "13.7"
+        ],
+        "page": 2
+      }
+    },
+    {
+      "id": "B3",
+      "class": "B",
+      "input": "我的 ALT 是多少",
+      "expected": "数值 58 + 第 2 页",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "【主治医生】 您的ALT（丙氨酸氨基转移酶）为 **58 U/L**（依据《eval_report.pdf》第 2 页）。 该数值略高于正常参考范围（通常0-4…",
+      "answer": "【主治医生】\n您的ALT（丙氨酸氨基转移酶）为 **58 U/L**（依据《eval_report.pdf》第 2 页）。\n\n该数值略高于正常参考范围（通常0-40 U/L），提示肝功能可能有轻度异常。建议结合其他肝功能指标综合评估，必要时复查或进一步检查。",
+      "meta_agent": "attending_doctor",
+      "http_status": 200,
+      "duration_s": 6.25,
+      "extra": {
+        "missing_numbers": [],
+        "matched_numbers": [
+          "58"
+        ],
+        "number_mode": "all",
+        "page_required": true,
+        "page_ok": true,
+        "numbers": [
+          "58"
+        ],
+        "page": 2
+      }
+    },
+    {
+      "id": "B4",
+      "class": "B",
+      "input": "我多大年纪",
+      "expected": "数值 45（不要求页码）",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "张先生，您今年 **45岁**。 请问还有其他健康方面的问题需要咨询吗？",
+      "answer": "张先生，您今年 **45岁**。\n\n请问还有其他健康方面的问题需要咨询吗？",
+      "meta_agent": "supervisor",
+      "http_status": 200,
+      "duration_s": 2.7,
+      "extra": {
+        "missing_numbers": [],
+        "matched_numbers": [
+          "45"
+        ],
+        "number_mode": "all",
+        "page_required": false,
+        "page_ok": null,
+        "numbers": [
+          "45"
+        ],
+        "page": null
+      }
+    },
+    {
+      "id": "B5",
+      "class": "B",
+      "input": "我有什么既往病史",
+      "expected": "数值 高血压 + 第 1 页",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "【主治医生】 您的既往病史为：**高血压 5 年，规律服药**（依据《eval_report.pdf》第 1 页）。 建议继续规律服用降压药物，定期监测血压。如…",
+      "answer": "【主治医生】\n您的既往病史为：**高血压 5 年，规律服药**（依据《eval_report.pdf》第 1 页）。\n\n建议继续规律服用降压药物，定期监测血压。如有其他问题可继续咨询。",
+      "meta_agent": "attending_doctor",
+      "http_status": 200,
+      "duration_s": 5.77,
+      "extra": {
+        "missing_numbers": [],
+        "matched_numbers": [
+          "高血压"
+        ],
+        "number_mode": "all",
+        "page_required": true,
+        "page_ok": true,
+        "numbers": [
+          "高血压"
+        ],
+        "page": 1
+      }
+    },
+    {
+      "id": "B6",
+      "class": "B",
+      "input": "我的主诉是什么",
+      "expected": "数值 口干 或 多饮 + 第 1 页",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "【主治医生】 您的主诉为：**口干、多饮两周**（依据《eval_report.pdf》第 1 页）。 该症状提示可能存在糖代谢异常，建议结合血糖检查结果进一步…",
+      "answer": "【主治医生】\n您的主诉为：**口干、多饮两周**（依据《eval_report.pdf》第 1 页）。\n\n该症状提示可能存在糖代谢异常，建议结合血糖检查结果进一步评估。",
+      "meta_agent": "attending_doctor",
+      "http_status": 200,
+      "duration_s": 6.12,
+      "extra": {
+        "missing_numbers": [],
+        "matched_numbers": [
+          "口干",
+          "多饮"
+        ],
+        "number_mode": "any",
+        "page_required": true,
+        "page_ok": true,
+        "numbers": [
+          "口干",
+          "多饮"
+        ],
+        "page": 1
+      }
+    },
+    {
+      "id": "B7",
+      "class": "B",
+      "input": "报告结论是什么",
+      "expected": "数值 血糖偏高 或 复查 + 第 2 页",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "【主治医生】 报告结论为：**血糖偏高，建议复查糖化血红蛋白**（依据《eval_report.pdf》第 2 页）。 结合您空腹血糖 6.2 mmol/L 及…",
+      "answer": "【主治医生】\n报告结论为：**血糖偏高，建议复查糖化血红蛋白**（依据《eval_report.pdf》第 2 页）。\n\n结合您空腹血糖 6.2 mmol/L 及口干、多饮症状，需进一步排查糖尿病或糖尿病前期。建议尽快完成糖化血红蛋白检查以明确诊断。",
+      "meta_agent": "attending_doctor",
+      "http_status": 200,
+      "duration_s": 6.08,
+      "extra": {
+        "missing_numbers": [],
+        "matched_numbers": [
+          "血糖偏高",
+          "复查"
+        ],
+        "number_mode": "any",
+        "page_required": true,
+        "page_ok": true,
+        "numbers": [
+          "血糖偏高",
+          "复查"
+        ],
+        "page": 2
+      }
+    },
+    {
+      "id": "B8",
+      "class": "B",
+      "input": "我的姓名是什么",
+      "expected": "数值 张三（不要求页码）",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "【私人医疗顾问】 您的姓名是 **张三**。 请问还有其他健康方面的问题需要咨询吗？",
+      "answer": "【私人医疗顾问】\n您的姓名是 **张三**。\n\n请问还有其他健康方面的问题需要咨询吗？",
+      "meta_agent": "supervisor",
+      "http_status": 200,
+      "duration_s": 2.84,
+      "extra": {
+        "missing_numbers": [],
+        "matched_numbers": [
+          "张三"
+        ],
+        "number_mode": "all",
+        "page_required": false,
+        "page_ok": null,
+        "numbers": [
+          "张三"
+        ],
+        "page": null
+      }
+    }
+  ],
+  "cleanup": {
+    "counts": {
+      "users": 2,
+      "conversations": 1,
+      "documents": 0,
+      "checkpoints_rows": 144,
+      "store_rows": 9,
+      "chroma": 0,
+      "uploads": 0
+    },
+    "verification": {
+      "users": {
+        "eval": 0,
+        "global": 0
+      },
+      "conversations": {
+        "eval": 0,
+        "global": 0
+      },
+      "medical_documents": {
+        "eval": 0,
+        "global": 0
+      },
+      "checkpoint_rows": 0,
+      "store_rows": 0,
+      "chroma": {
+        "eval": 1,
+        "global": 2
+      },
+      "uploads": {
+        "eval": 0,
+        "global": 0
+      }
+    },
+    "residual": [
+      "chroma:D:\\smart-medical-assistant\\backend\\storage\\chroma\\user_75_f183298a14"
+    ],
+    "errors": [
+      "删除目录 D:\\smart-medical-assistant\\backend\\storage\\chroma\\user_75_f183298a14 失败: [WinError 32] 另一个程序正在使用此文件，进程无法访问。: 'D:\\\\smart-medical-assistant\\\\backend\\\\storage\\\\chroma\\\\user_75_f183298a14\\\\7e7192bd-77c7-4b3b-a8ee-25e6ad1c9f6e\\\\data_level0.bin'（若为 WinError 32，通常是后端进程仍持有 Chroma 文件，需重启后端后清理）"
+    ]
+  },
+  "console_table": "=== 评测结果 2026-10-19 19:46 ===\nB 检索问答     8/8   100.0%\n------------------------------------\n合计             8/8   100.0%   耗时 1m04s",
+  "notes": [
+    "B 类先调用 save_extracted_info_to_store 写入长记忆，再用 index_pages 建索引；仍未覆盖上传→PDF 解析→索引链路。",
+    "B4/B8 不要求页码（由 medical_examiner / supervisor 处理，不检索）；B5/B6/B7 保留页码要求。",
+    "判据为字符串包含/边界正则，不使用 LLM 裁判。",
+    "D 类主判据只看报告特征值；无数据表述降为备注字段，不参与判定。回答原文已全部写入 JSON 供人工复核。"
+  ]
+}
