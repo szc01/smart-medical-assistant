@@ -104,6 +104,8 @@ POST /chat/stream
 
 更细的设计说明、状态定义与扩展方式见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
 
+流式改造的完整复盘（含被数据推翻的三个判断）见 [`docs/CASE_STUDY_SSE.md`](docs/CASE_STUDY_SSE.md)。
+
 ## 技术栈
 
 **后端**：Python 3.12 · FastAPI · LangGraph 1.0 · LangChain 1.0 · SQLAlchemy 2.0 · PostgreSQL（长期记忆 / 会话 / 医疗文档）· MySQL（用户账号）· Pydantic 2 · python-jose + bcrypt  
@@ -142,6 +144,7 @@ smart-medical-assistant/
 │   ├── package.json
 │   └── vite.config.ts
 ├── docs/ARCHITECTURE.md       # 架构与设计取舍
+├── docs/CASE_STUDY_SSE.md     # 流式改造复盘（12s → 3s 的完整过程）
 ├── docker-compose.yml         # 一键起 MySQL + PostgreSQL
 ├── .gitignore
 └── LICENSE
