@@ -251,56 +251,52 @@ const saveMessageToConversation = async (role: string, content: string) => {
 
 // 处理文档上传后，让 AI 分析并回复
 const processDocumentWithAI = async (fileName: string, documentType: string) => {
+  const userMessage = `我上传了一份医疗文档：${fileName}（类型：${documentType}），请分析并提取其中的关键信息。`
+  const assistantMessage = messages.value[messages.value.length - 1]
+  const streamState: { error: string | null } = { error: null }
+
+  const markAssistantError = (detail: string) => {
+    console.error('AI 分析文档失败:', detail)
+    ElMessage.error('AI 分析文档失败')
+    if (!assistantMessage || assistantMessage.role !== 'assistant') return
+    assistantMessage.content = '抱歉，分析文档时出现错误，请稍后重试。'
+    assistantMessage.isError = true
+    assistantMessage.timestamp = new Date()
+    scrollToBottom()
+  }
+
   try {
-    const userMessage = `我上传了一份医疗文档：${fileName}（类型：${documentType}），请分析并提取其中的关键信息。`
-    
     const token = localStorage.getItem('token')
-    const response = await fetch(`${backendUrl}/chat/send`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
+    await streamChat({
+      url: `${backendUrl}/chat/stream`,
+      token: token || '',
+      body: {
         user_id: userId.value,
         message: userMessage,
         thread_id: threadId.value
-      })
+      },
+      handlers: {
+        onToken: (text) => {
+          if (!assistantMessage || assistantMessage.role !== 'assistant') return
+          assistantMessage.content += text
+          scrollToBottom()
+        },
+        onError: (detail) => {
+          streamState.error = detail
+        }
+      }
     })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    if (streamState.error !== null) {
+      markAssistantError(streamState.error)
+    } else if (assistantMessage) {
+      assistantMessage.timestamp = new Date()
     }
 
-    // 解析 JSON 响应
-    const data = await response.json()
-    
-    if (data.success && data.message) {
-      // 更新 AI 消息内容
-      const lastMessage = messages.value[messages.value.length - 1]
-      if (lastMessage && lastMessage.role === 'assistant') {
-        messages.value[messages.value.length - 1] = {
-          ...lastMessage,
-          content: data.message,
-          timestamp: new Date()
-        }
-        await nextTick()
-        scrollToBottom()
-      }
-    }
+    await nextTick()
+    scrollToBottom()
   } catch (error) {
-    console.error('AI 分析文档失败:', error)
-    ElMessage.error('AI 分析文档失败')
-    
-    // 更新错误提示
-    const lastMessage = messages.value[messages.value.length - 1]
-    if (lastMessage && lastMessage.role === 'assistant') {
-      messages.value[messages.value.length - 1] = {
-        ...lastMessage,
-        content: '抱歉，分析文档时出现错误，请稍后重试。',
-        timestamp: new Date()
-      }
-    }
+    markAssistantError(error instanceof Error ? error.message : String(error))
   }
 }
 
