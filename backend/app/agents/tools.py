@@ -12,7 +12,11 @@ from tavily import TavilyClient
 from app.config.settings import settings
 from app.agents.memory import get_long_term_memory
 import json
+import logging
 import uuid
+
+
+logger = logging.getLogger(__name__)
 
 
 # 初始化 Tavily 客户端（联网搜索工具）
@@ -31,7 +35,8 @@ def search_web(query: str) -> str:
         summaries = [item["content"] for item in result.get("results", [])]
         return "\n".join(summaries) if summaries else "未找到相关信息"
     except Exception as e:
-        return f"搜索失败：{str(e)}"
+        logger.warning("联网检索失败: %s", e)
+        return "联网检索暂时不可用，请基于已知医学知识回答"
 
 
 @tool

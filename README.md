@@ -243,7 +243,8 @@ npm run dev
 | -------- | ---------------------------------------- | --------------------------------------------------------------------- |
 | `POST`   | `/auth/register`                         | 注册（JSON：username / password / email）                                  |
 | `POST`   | `/auth/token`                            | 登录（`application/x-www-form-urlencoded`），返回 `access_token` 与 `user_id` |
-| `POST`   | `/chat/send`                             | 发送消息，返回多智能体最终回复                                                       |
+| `POST`   | `/chat/stream`                           | 发送消息，以 SSE（`text/event-stream`）流式返回 meta / token / done / error 事件         |
+| `POST`   | `/chat/send`                             | 发送消息，返回多智能体最终回复；deprecated（保留兼容，将移除），请改用 `/chat/stream`            |
 | `POST`   | `/conversations/create`                  | 新建会话（前端生成 id）                                                         |
 | `GET`    | `/conversations/list?user_id=`           | 会话列表                                                                  |
 | `GET`    | `/conversations/get?conversation_id=`    | 会话详情（含历史消息）                                                           |
@@ -274,7 +275,7 @@ curl -X POST http://localhost:8000/auth/token \
 
 诚实列出，避免误解：
 
-- **非流式对话**：`/chat/send` 一次性返回全文，回复是整段出现，前端**没有**逐字渲染（`startTypeWriter` 是未接入的死代码，SSE 化后再清理）。
+- **流式对话**：前端通过 `/chat/stream`（SSE）接收回复并增量渲染；`/chat/send` 仅保留兼容，后续将移除。
 - **单轮路由**：子智能体执行完即结束，不做工具调用的多轮自循环（见设计要点 2）。
 - **PDF 仅支持文本层**：扫描件需先 OCR；正文读取上限 8000 字符。
 - **模型强绑定 DashScope**：换模型需改 `app/agents/base.py` 与 `app/rag/document_extractor.py` 的模型名与 endpoint。

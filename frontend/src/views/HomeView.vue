@@ -35,12 +35,6 @@ const inputMessage = ref('')
 const userId = ref('')  // 使用登录用户的真实ID，不再随机生成
 const threadId = ref('')
 
-// 打字机效果相关
-const isTyping = ref(false)
-const currentAiContent = ref('')
-const typingTimer = ref<number | null>(null)
-const pendingContent = ref('')
-
 const messagesContainerRef = ref<HTMLElement | null>(null)
 const user = ref<any>(null)
 const uploadedFiles = ref<any[]>([])
@@ -332,28 +326,45 @@ const handleLogout = () => {
 // 后端历史消息带【角色名】前缀，渲染前统一剥离，避免与前端角色标签重复
 const stripRolePrefix = (s: string) => s.replace(/^【[^】]{1,10}】\s*/, '')
 
+// 配置marked库
+const markedOptions = {
+  async: false as const, // 同步解析，返回 string
+  breaks: true,  // 支持换行
+  gfm: true,     // 支持GitHub风格的Markdown
+  tables: true,  // 支持表格
+  headerIds: false, // 不生成header id
+  mangle: false  // 不混淆邮件地址
+}
+
+// Markdown 解析按动画帧批处理：每帧只解析每条消息的最新内容，未解析完时沿用上一帧 HTML
+const renderVersion = ref(0)
+const renderedMessages = new WeakMap<Message, { source: string; html: string }>()
+let renderFrame: number | null = null
+let pendingMessages = new Set<Message>()
+
 // 转换Markdown为HTML
-const renderContent = (content: string, role: Message['role']) => {
-  const cleaned = role === 'assistant' ? stripRolePrefix(content) : content
+const renderContent = (message: Message) => {
+  void renderVersion.value // 依赖渲染版本，rAF 更新后触发重新渲染
+  const cleaned = message.role === 'assistant' ? stripRolePrefix(message.content) : message.content
   if (!cleaned) return ''
-  
-  console.log('[renderContent] 原始 Markdown 内容:', cleaned)
-  
-  // 配置marked库
-  const markedOptions = {
-    breaks: true,  // 支持换行
-    gfm: true,     // 支持GitHub风格的Markdown
-    tables: true,  // 支持表格
-    headerIds: false, // 不生成header id
-    mangle: false  // 不混淆邮件地址
+
+  const rendered = renderedMessages.get(message)
+  if (rendered && rendered.source === cleaned) return rendered.html
+
+  pendingMessages.add(message)
+  if (renderFrame === null) {
+    renderFrame = requestAnimationFrame(() => {
+      renderFrame = null
+      for (const pending of pendingMessages) {
+        const source = pending.role === 'assistant' ? stripRolePrefix(pending.content) : pending.content
+        if (!source) continue
+        renderedMessages.set(pending, { source, html: marked(source, markedOptions) })
+      }
+      pendingMessages = new Set()
+      renderVersion.value++
+    })
   }
-  
-  // 直接渲染，不做额外预处理
-  // 后端返回的内容已经有正确的 Markdown 格式
-  const html = marked(cleaned, markedOptions)
-  console.log('[renderContent] 渲染后的 HTML:', html)
-  
-  return html
+  return rendered?.html ?? ''
 }
 
 // 滚动到最新消息
@@ -363,39 +374,6 @@ const scrollToBottom = () => {
       messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight
     }
   }, 50)
-}
-
-// 开始打字机效果
-const startTypeWriter = (assistantMessageId: number) => {
-  // 清除之前的定时器
-  if (typingTimer.value) {
-    clearInterval(typingTimer.value)
-  }
-  
-  currentAiContent.value = ''
-  isTyping.value = true
-  
-  let index = 0
-  const content = pendingContent.value
-  
-  typingTimer.value = window.setInterval(() => {
-    if (index < content.length) {
-      currentAiContent.value += content.charAt(index)
-      const assistantMessage = messages.value[assistantMessageId]
-      if (assistantMessage) {
-        assistantMessage.content = currentAiContent.value
-      }
-      scrollToBottom()
-      index++
-    } else {
-      // 打字结束
-      clearInterval(typingTimer.value!)
-      typingTimer.value = null
-      isTyping.value = false
-      currentAiContent.value = ''
-      pendingContent.value = ''
-    }
-  }, 30) // 打字速度，每30毫秒打一个字
 }
 
 const chatHistory = computed(() => {
@@ -777,7 +755,7 @@ onMounted(() => {
               <div class="message-role">
                 {{ msg.role === 'user' ? '我' : (msg.agentLabel || '医疗助手') }}
               </div>
-              <div class="message-text" v-html="renderContent(msg.content, msg.role)"></div>
+              <div class="message-text" v-html="renderContent(msg)"></div>
               <div class="message-time">
                 {{ msg.timestamp.toLocaleTimeString() }}
               </div>
