@@ -4,6 +4,15 @@
   "version": "1.0.0",
   "description": "小滴 · 智能医疗助手前端 —— Vue 3 + TypeScript + Element Plus",
   "license": "MIT",
+  "author": "随治诚 (szc01)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/szc01/smart-medical-assistant.git"
+  },
+  "homepage": "https://github.com/szc01/smart-medical-assistant#readme",
+  "bugs": {
+    "url": "https://github.com/szc01/smart-medical-assistant/issues"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
