@@ -61,7 +61,7 @@ CLASS_ORDER = ["A", "B", "C", "D", "E"]
 CASES: dict[str, list[dict[str, Any]]] = {
     "A": [
         {"id": "A1", "input": "你好", "expected_agent": "supervisor"},
-        {"id": "A2", "input": "我最近老头晕，可能是什么原因", "expected_agent": "medical_examiner"},
+        {"id": "A2", "input": "我最近老头晕，可能是什么原因", "expected_agent": "medical_examiner", "allowed_agents": ["medical_examiner", "attending_doctor"], "note": "有长记忆时两种路由都合理：体检员追问症状，医生结合既往病史直接分析"},
         {"id": "A3", "input": "阿莫西林和头孢能一起吃吗", "expected_agent": "pharmacist"},
         {"id": "A4", "input": "我报告里的空腹血糖是多少", "expected_agent": "attending_doctor"},
         {"id": "A5", "input": "我刚上传了一份体检报告，帮我整理一下", "expected_agent": "medical_examiner"},
@@ -394,20 +394,28 @@ def _run_a(
         if stream["error"]:
             reasons.append(stream["error"])
         actual = stream["meta_agent"] or ""
-        if actual != case["expected_agent"]:
+        # allowed_agents 仅用于「多种路由都合理」的场景（如 A2 有长记忆时的体检员/医生歧义），
+        # 单值 case 仍按精确相等判定，不得滥用
+        allowed = case.get("allowed_agents") or [case["expected_agent"]]
+        if actual not in allowed:
             reasons.append(f"实际 agent={actual or '缺失'}")
+        expected_desc = (
+            "agent in " + " | ".join(allowed)
+            if len(allowed) > 1
+            else f"agent={allowed[0]}"
+        )
         result = _result(
             case["id"],
             "A",
             case["input"],
-            f"agent={case['expected_agent']}",
+            expected_desc,
             not reasons,
             reasons,
             answer=stream["answer"],
             meta_agent=stream["meta_agent"],
             http_status=stream["status"],
             duration_s=stream["duration_s"],
-            extra={"expected_agent": case["expected_agent"], "actual_agent": actual},
+            extra={"expected_agent": case["expected_agent"], "allowed_agents": allowed, "actual_agent": actual},
         )
         results.append(result)
         _log_case(result)
