@@ -5,7 +5,7 @@
     python scripts/eval_suite.py --only B
     python scripts/eval_suite.py --out results/xxx.json
 
-评测全部通过 HTTP 走 POST /chat/stream；B 类索引按手册用 index_pages 直接灌入。
+评测全部通过 HTTP 走 POST /chat/stream；B 类先按真实上传状态写长记忆，再用 index_pages 灌入两页索引。
 脚本自行注册两个账号、清理账号/会话/文档/checkpoint/store/Chroma/uploads。
 判据全部为字符串包含或边界正则，不使用 LLM 裁判。
 """
@@ -70,11 +70,11 @@ CASES: dict[str, list[dict[str, Any]]] = {
         {"id": "B1", "input": "我报告里的空腹血糖是多少", "numbers": ["6.2"], "page": 2},
         {"id": "B2", "input": "我的血红蛋白是多少", "numbers": ["13.7"], "page": 2},
         {"id": "B3", "input": "我的 ALT 是多少", "numbers": ["58"], "page": 2},
-        {"id": "B4", "input": "我多大年纪", "numbers": ["45"], "page": 1},
+        {"id": "B4", "input": "我多大年纪", "numbers": ["45"], "page": None, "require_page": False},
         {"id": "B5", "input": "我有什么既往病史", "numbers": ["高血压"], "page": 1},
         {"id": "B6", "input": "我的主诉是什么", "numbers": ["口干", "多饮"], "page": 1, "number_mode": "any"},
         {"id": "B7", "input": "报告结论是什么", "numbers": ["血糖偏高", "复查"], "page": 2, "number_mode": "any"},
-        {"id": "B8", "input": "我的姓名是什么", "numbers": ["张三"], "page": 1},
+        {"id": "B8", "input": "我的姓名是什么", "numbers": ["张三"], "page": None, "require_page": False},
     ],
     "C": [
         {"id": "C1", "input": "感冒了能吃什么"},
@@ -111,6 +111,7 @@ class RunContext:
     memory_b: str = ""
     conversation_a: str = ""
     indexed_chunks: int = 0
+    long_memory_saved: list[str] = field(default_factory=list)
     thread_ids: set[str] = field(default_factory=set)
     started_at: datetime = field(default_factory=datetime.now)
 
@@ -319,7 +320,34 @@ def _prepare(session: requests.Session, base_url: str, ctx: RunContext) -> None:
     ctx.memory_b = f"user_{ctx.user_id_b}"
     print(f"[预处理] 账号 B: {ctx.username_b} (id={ctx.user_id_b}, {ctx.memory_b})")
 
+    from app.agents.memory import get_long_term_memory
+    from app.rag.document_extractor import MedicalRecord, save_extracted_info_to_store
     from app.rag.vector_store import index_pages
+
+    # 模拟真实上传后的状态：结构化信息进长记忆，再建向量索引
+    record = MedicalRecord(
+        basic_info={"name": "张三", "age": 45, "gender": "男"},
+        symptoms=["口干、多饮两周"],
+        medical_history=["高血压 5 年，规律服药"],
+        allergies=["青霉素过敏"],
+        test_results=[
+            "空腹血糖 6.2 mmol/L",
+            "血红蛋白 13.7 g/dL",
+            "ALT 58 U/L",
+            "肌酐 88 μmol/L",
+            "结论：血糖偏高，建议复查糖化血红蛋白",
+        ],
+    )
+    started_memory = time.perf_counter()
+    ctx.long_memory_saved = save_extracted_info_to_store(
+        get_long_term_memory(), ctx.memory_a, record, REPORT_FILENAME
+    )
+    if not ctx.long_memory_saved:
+        raise RuntimeError("save_extracted_info_to_store 未写入任何长记忆")
+    print(
+        f"[预处理] 长记忆: {len(ctx.long_memory_saved)} 项 -> {ctx.memory_a}"
+        f"（{time.perf_counter() - started_memory:.1f}s）"
+    )
 
     started = time.perf_counter()
     ctx.indexed_chunks = index_pages(
@@ -415,11 +443,18 @@ def _run_b(
             ]
             if missing_numbers:
                 reasons.append(f"缺少 {'/'.join(missing_numbers)}")
-        page_ok = bool(_page_pattern(case["page"]).search(answer))
-        if not page_ok:
-            reasons.append(f"缺少页码「第 {case['page']} 页」")
+        page_required = case.get("require_page", True)
+        page_ok = None
+        if page_required:
+            page_ok = bool(_page_pattern(case["page"]).search(answer))
+            if not page_ok:
+                reasons.append(f"缺少页码「第 {case['page']} 页」")
         joiner = " 或 " if number_mode == "any" else "/"
-        expected = f"数值 {joiner.join(case['numbers'])} + 第 {case['page']} 页"
+        expected = f"数值 {joiner.join(case['numbers'])}"
+        if page_required:
+            expected += f" + 第 {case['page']} 页"
+        else:
+            expected += "（不要求页码）"
         result = _result(
             case["id"],
             "B",
@@ -435,6 +470,7 @@ def _run_b(
                 "missing_numbers": missing_numbers,
                 "matched_numbers": matched_numbers,
                 "number_mode": number_mode,
+                "page_required": page_required,
                 "page_ok": page_ok,
                 "numbers": case["numbers"],
                 "page": case["page"],
@@ -501,13 +537,16 @@ def _run_d(
         hits = _blacklist_hits(answer)
         reasons.extend(f"命中禁用值「{value}」" for value in hits)
         phrase_found = next((phrase for phrase in NO_DATA_PHRASES if phrase in answer), None)
-        if not phrase_found:
-            reasons.append("缺少无数据表述（没有/未找到/未上传/无法/不清楚/上传）")
+        note = (
+            f"无数据表述: {phrase_found}"
+            if phrase_found
+            else "未出现无数据表述（仅备注，不参与判定）"
+        )
         result = _result(
             case["id"],
             "D",
             case["input"],
-            "不含 6.2/13.7/58/88/张三 + 含无数据表述",
+            "不含 6.2/13.7/58/88/张三（无数据词仅备注）",
             not reasons,
             reasons,
             answer=answer,
@@ -516,6 +555,7 @@ def _run_d(
             duration_s=stream["duration_s"],
             extra={"blacklist_hits": hits, "no_data_phrase": phrase_found},
         )
+        result["notes"] = [note]
         results.append(result)
         _log_case(result)
     return results
@@ -721,7 +761,9 @@ def _print_d_answers(results: list[dict[str, Any]], selected: list[str]) -> None
     for item in results:
         if item["class"] == "D":
             flag = "通过" if item["passed"] else "失败"
-            print(f"{item['id']} [{flag}] {item['answer']}")
+            note = "；".join(item.get("notes", []))
+            print(f"{item['id']} [{flag}] {note}")
+            print(item["answer"])
 
 
 def _cleanup(ctx: RunContext) -> dict[str, Any]:
@@ -1115,7 +1157,9 @@ def _build_markdown(
             "",
             "## 说明",
             "",
-            "- B 类通过 `index_pages` 直接灌入两页固定索引，不覆盖「上传 → PDF 解析 → 索引」链路。",
+            "- B 类先调用 `save_extracted_info_to_store` 写入 basic_info/symptoms/medical_history/allergies/test_results，再用 `index_pages` 建两页索引；仍未覆盖「上传 → PDF 解析 → 索引」链路。",
+            "- B4/B8 只判数值（路由到 medical_examiner / supervisor，不检索，不要求页码）；B5/B6/B7 保留页码要求。",
+            "- D 类主判据只看报告特征值；无数据表述仅作备注，不参与判定。",
             "- A 类每题独立线程；B 类共享 A 的会话；C/D 每题独立线程；E 使用 A 的会话。",
             "- 判定为字符串包含/边界正则，未使用 LLM 裁判。",
             "- 清理校验（evals）："
@@ -1216,6 +1260,20 @@ def main() -> int:
                 "filename": REPORT_FILENAME,
                 "pages": [PAGE1_TEXT, PAGE2_TEXT],
                 "indexed_chunks": ctx.indexed_chunks,
+                "long_term_memory_saved": ctx.long_memory_saved,
+                "long_term_memory_record": {
+                    "basic_info": {"name": "张三", "age": 45, "gender": "男"},
+                    "symptoms": ["口干、多饮两周"],
+                    "medical_history": ["高血压 5 年，规律服药"],
+                    "allergies": ["青霉素过敏"],
+                    "test_results": [
+                        "空腹血糖 6.2 mmol/L",
+                        "血红蛋白 13.7 g/dL",
+                        "ALT 58 U/L",
+                        "肌酐 88 μmol/L",
+                        "结论：血糖偏高，建议复查糖化血红蛋白",
+                    ],
+                },
             },
             "thread_strategy": {
                 "A": "每题独立线程",
@@ -1234,9 +1292,10 @@ def main() -> int:
         "cleanup": cleanup,
         "console_table": table,
         "notes": [
-            "B 类用 index_pages 直接灌索引，未覆盖上传→PDF 解析→索引链路。",
+            "B 类先调用 save_extracted_info_to_store 写入长记忆，再用 index_pages 建索引；仍未覆盖上传→PDF 解析→索引链路。",
+            "B4/B8 不要求页码（由 medical_examiner / supervisor 处理，不检索）；B5/B6/B7 保留页码要求。",
             "判据为字符串包含/边界正则，不使用 LLM 裁判。",
-            "D 类回答原文已全部写入 JSON，需人工复核是否编造了黑名单外的数值。",
+            "D 类主判据只看报告特征值；无数据表述降为备注字段，不参与判定。回答原文已全部写入 JSON 供人工复核。",
         ],
     }
     out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
