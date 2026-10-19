@@ -1,0 +1,679 @@
+{
+  "meta": {
+    "brief": "P0-1",
+    "run_id": "20261019_170329_4ef2",
+    "started_at": "2026-10-19T17:03:29",
+    "finished_at": "2026-10-19T17:05:51",
+    "base_url": "http://127.0.0.1:8001",
+    "selected_classes": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E"
+    ],
+    "accounts": {
+      "a": {
+        "username": "eval_a_20261019_170329_4ef2",
+        "user_id": 48,
+        "memory_id": "user_48"
+      },
+      "b": {
+        "username": "eval_b_20261019_170329_4ef2",
+        "user_id": 49,
+        "memory_id": "user_49"
+      }
+    },
+    "report": {
+      "filename": "eval_report.pdf",
+      "pages": [
+        "姓名：张三  年龄：45 岁  性别：男\n主诉：口干、多饮两周。既往史：高血压 5 年，规律服药。\n过敏史：青霉素过敏。",
+        "空腹血糖 6.2 mmol/L；血红蛋白 13.7 g/dL；ALT 58 U/L；肌酐 88 μmol/L。\n结论：血糖偏高，建议复查糖化血红蛋白。"
+      ],
+      "indexed_chunks": 2
+    },
+    "thread_strategy": {
+      "A": "每题独立线程",
+      "B": "共享 A 的会话",
+      "C": "每题独立线程",
+      "D": "每题独立线程",
+      "E": "使用 A 的会话 + 独立线程"
+    },
+    "eval_duration_s": 135.87,
+    "total_duration_s": 142.32,
+    "thread_ids": [
+      "20261019_170329_4ef2_A1",
+      "20261019_170329_4ef2_A2",
+      "20261019_170329_4ef2_A3",
+      "20261019_170329_4ef2_A4",
+      "20261019_170329_4ef2_A5",
+      "20261019_170329_4ef2_C1",
+      "20261019_170329_4ef2_C2",
+      "20261019_170329_4ef2_C3",
+      "20261019_170329_4ef2_C4",
+      "20261019_170329_4ef2_C5",
+      "20261019_170329_4ef2_C6",
+      "20261019_170329_4ef2_D1",
+      "20261019_170329_4ef2_D2",
+      "20261019_170329_4ef2_D3",
+      "20261019_170329_4ef2_E3",
+      "eval_conv_20261019_170329_4ef2"
+    ]
+  },
+  "summary": [
+    {
+      "class": "A",
+      "label": "路由正确性",
+      "passed": 5,
+      "total": 5,
+      "rate": 100.0
+    },
+    {
+      "class": "B",
+      "label": "检索问答",
+      "passed": 4,
+      "total": 8,
+      "rate": 50.0
+    },
+    {
+      "class": "C",
+      "label": "无关不硬扯",
+      "passed": 5,
+      "total": 6,
+      "rate": 83.3
+    },
+    {
+      "class": "D",
+      "label": "兜底不幻觉",
+      "passed": 3,
+      "total": 3,
+      "rate": 100.0
+    },
+    {
+      "class": "E",
+      "label": "越权拦截",
+      "passed": 3,
+      "total": 3,
+      "rate": 100.0
+    }
+  ],
+  "total": {
+    "passed": 20,
+    "total": 25,
+    "rate": 80.0
+  },
+  "cases": [
+    {
+      "id": "A1",
+      "class": "A",
+      "input": "你好",
+      "expected": "agent=supervisor",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "您好！我是您的私人医疗顾问。请问今天有什么可以帮您的？是想咨询健康问题，还是需要安排就诊呢？",
+      "answer": "您好！我是您的私人医疗顾问。请问今天有什么可以帮您的？是想咨询健康问题，还是需要安排就诊呢？",
+      "meta_agent": "supervisor",
+      "http_status": 200,
+      "duration_s": 4.35,
+      "extra": {
+        "expected_agent": "supervisor",
+        "actual_agent": "supervisor"
+      }
+    },
+    {
+      "id": "A2",
+      "class": "A",
+      "input": "我最近老头晕，可能是什么原因",
+      "expected": "agent=medical_examiner",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "已保存症状描述: 头晕...您好！头晕可能由多种原因引起，比如血压问题、贫血、颈椎问题、睡眠不足等。为了更准确地为您分析，我需要了解一些信息： 1. 请问您的姓…",
+      "answer": "已保存症状描述: 头晕...您好！头晕可能由多种原因引起，比如血压问题、贫血、颈椎问题、睡眠不足等。为了更准确地为您分析，我需要了解一些信息：\n\n1. 请问您的姓名、年龄和性别？\n2. 头晕持续多久了？是持续性的还是偶尔发作？严重程度如何？\n\n您也可以点击下方的「上传医疗文档」按钮，上传病历、体检报告或化验单，系统会自动提取信息。",
+      "meta_agent": "medical_examiner",
+      "http_status": 200,
+      "duration_s": 8.97,
+      "extra": {
+        "expected_agent": "medical_examiner",
+        "actual_agent": "medical_examiner"
+      }
+    },
+    {
+      "id": "A3",
+      "class": "A",
+      "input": "阿莫西林和头孢能一起吃吗",
+      "expected": "agent=pharmacist",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "**不建议一起服用**，且您有**青霉素过敏史**（依据《eval_report.pdf》第 1 页），需特别注意： | 问题 | 说明 | |------|-…",
+      "answer": "**不建议一起服用**，且您有**青霉素过敏史**（依据《eval_report.pdf》第 1 页），需特别注意：\n\n| 问题 | 说明 |\n|------|------|\n| 过敏风险 | 阿莫西林属青霉素类，您已明确过敏，**禁用** |\n| 交叉过敏 | 头孢与青霉素有约10%交叉过敏风险，需谨慎 |\n| 联用问题 | 两者均为β-内酰胺类抗生素，作用机制相似，联用无增效，反而增加不良反应风险 |\n\n**建议：**\n1. **阿莫西林禁用**（青霉素过敏）\n2. 如需用抗生素，请告知医生您的过敏史，可考虑大环内酯类（如阿奇霉素）或喹诺酮类（如左氧氟沙星）等替代\n3. 抗生素需凭处方使用，请问是医生开具的吗？用于什么感染？\n\n**禁忌症询问：** 您是否有肝肾功能问题、胃病或正在服用其他药物？（您ALT 58 U/L略偏高，依据《eval_report.pdf》第 2 页）",
+      "meta_agent": "pharmacist",
+      "http_status": 200,
+      "duration_s": 8.86,
+      "extra": {
+        "expected_agent": "pharmacist",
+        "actual_agent": "pharmacist"
+      }
+    },
+    {
+      "id": "A4",
+      "class": "A",
+      "input": "我报告里的空腹血糖是多少",
+      "expected": "agent=attending_doctor",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "您的空腹血糖为 **6.2 mmol/L**（依据《eval_report.pdf》第 2 页）。 该数值高于正常范围（正常空腹血糖 3.9-6.1 mmol/…",
+      "answer": "您的空腹血糖为 **6.2 mmol/L**（依据《eval_report.pdf》第 2 页）。\n\n该数值高于正常范围（正常空腹血糖 3.9-6.1 mmol/L），结合您口干、多饮的症状，提示可能存在糖代谢异常。建议复查糖化血红蛋白（HbA1c）以进一步评估。",
+      "meta_agent": "attending_doctor",
+      "http_status": 200,
+      "duration_s": 4.96,
+      "extra": {
+        "expected_agent": "attending_doctor",
+        "actual_agent": "attending_doctor"
+      }
+    },
+    {
+      "id": "A5",
+      "class": "A",
+      "input": "我刚上传了一份体检报告，帮我整理一下",
+      "expected": "agent=medical_examiner",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "您好，您的体检报告已收到，系统已自动提取相关信息。 目前记录到的信息： - 症状：头晕 为了完善您的健康档案，还需要了解： 1. 您的姓名、年龄、性别？ 2. …",
+      "answer": "您好，您的体检报告已收到，系统已自动提取相关信息。\n\n目前记录到的信息：\n- 症状：头晕\n\n为了完善您的健康档案，还需要了解：\n1. 您的姓名、年龄、性别？\n2. 头晕持续多久了？严重程度如何？\n\n您也可以继续补充既往病史、过敏史或家族病史等信息。",
+      "meta_agent": "medical_examiner",
+      "http_status": 200,
+      "duration_s": 5.52,
+      "extra": {
+        "expected_agent": "medical_examiner",
+        "actual_agent": "medical_examiner"
+      }
+    },
+    {
+      "id": "B1",
+      "class": "B",
+      "input": "我报告里的空腹血糖是多少",
+      "expected": "数值 6.2 + 第 2 页",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "您的空腹血糖为 **6.2 mmol/L**（依据《eval_report.pdf》第 2 页）。 该数值高于正常参考范围（3.9-6.1 mmol/L），结合…",
+      "answer": "您的空腹血糖为 **6.2 mmol/L**（依据《eval_report.pdf》第 2 页）。\n\n该数值高于正常参考范围（3.9-6.1 mmol/L），结合您口干、多饮的症状，提示血糖代谢异常。建议复查糖化血红蛋白（HbA1c）以明确诊断。",
+      "meta_agent": "attending_doctor",
+      "http_status": 200,
+      "duration_s": 4.89,
+      "extra": {
+        "missing_numbers": [],
+        "matched_numbers": [
+          "6.2"
+        ],
+        "number_mode": "all",
+        "page_ok": true,
+        "numbers": [
+          "6.2"
+        ],
+        "page": 2
+      }
+    },
+    {
+      "id": "B2",
+      "class": "B",
+      "input": "我的血红蛋白是多少",
+      "expected": "数值 13.7 + 第 2 页",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "您的血红蛋白为 **13.7 g/dL**（依据《eval_report.pdf》第 2 页）。 该数值在正常参考范围内（男性 13.0-17.5 g/dL），…",
+      "answer": "您的血红蛋白为 **13.7 g/dL**（依据《eval_report.pdf》第 2 页）。\n\n该数值在正常参考范围内（男性 13.0-17.5 g/dL），无贫血迹象。",
+      "meta_agent": "attending_doctor",
+      "http_status": 200,
+      "duration_s": 4.02,
+      "extra": {
+        "missing_numbers": [],
+        "matched_numbers": [
+          "13.7"
+        ],
+        "number_mode": "all",
+        "page_ok": true,
+        "numbers": [
+          "13.7"
+        ],
+        "page": 2
+      }
+    },
+    {
+      "id": "B3",
+      "class": "B",
+      "input": "我的 ALT 是多少",
+      "expected": "数值 58 + 第 2 页",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "【主治医生】 您的ALT（丙氨酸氨基转移酶）为 **58 U/L**（依据《eval_report.pdf》第 2 页）。 该数值略高于正常参考范围（通常0-4…",
+      "answer": "【主治医生】\n您的ALT（丙氨酸氨基转移酶）为 **58 U/L**（依据《eval_report.pdf》第 2 页）。\n\n该数值略高于正常参考范围（通常0-40 U/L），提示肝功能轻度异常。建议结合其他肝功能指标综合评估，必要时复查。",
+      "meta_agent": "attending_doctor",
+      "http_status": 200,
+      "duration_s": 4.32,
+      "extra": {
+        "missing_numbers": [],
+        "matched_numbers": [
+          "58"
+        ],
+        "number_mode": "all",
+        "page_ok": true,
+        "numbers": [
+          "58"
+        ],
+        "page": 2
+      }
+    },
+    {
+      "id": "B4",
+      "class": "B",
+      "input": "我多大年纪",
+      "expected": "数值 45 + 第 1 页",
+      "passed": false,
+      "reasons": [
+        "缺少 45",
+        "缺少页码「第 1 页」"
+      ],
+      "reason": "缺少 45；缺少页码「第 1 页」",
+      "answer_preview": "我目前没有记录您的年龄信息。 为了完善您的健康档案，可以告诉我您的年龄吗？您也可以点击下方的「上传医疗文档」按钮，上传病历或体检报告，系统会自动提取信息。",
+      "answer": "我目前没有记录您的年龄信息。\n\n为了完善您的健康档案，可以告诉我您的年龄吗？您也可以点击下方的「上传医疗文档」按钮，上传病历或体检报告，系统会自动提取信息。",
+      "meta_agent": "medical_examiner",
+      "http_status": 200,
+      "duration_s": 4.38,
+      "extra": {
+        "missing_numbers": [
+          "45"
+        ],
+        "matched_numbers": [],
+        "number_mode": "all",
+        "page_ok": false,
+        "numbers": [
+          "45"
+        ],
+        "page": 1
+      }
+    },
+    {
+      "id": "B5",
+      "class": "B",
+      "input": "我有什么既往病史",
+      "expected": "数值 高血压 + 第 1 页",
+      "passed": false,
+      "reasons": [
+        "缺少页码「第 1 页」"
+      ],
+      "reason": "缺少页码「第 1 页」",
+      "answer_preview": "【体检员】 目前您的健康档案中**没有记录既往病史**，只有症状描述（头晕）。 请问您是否有以下情况需要补充： 1. 慢性疾病（如高血压、糖尿病等） 2. 手术…",
+      "answer": "【体检员】\n目前您的健康档案中**没有记录既往病史**，只有症状描述（头晕）。\n\n请问您是否有以下情况需要补充：\n1. 慢性疾病（如高血压、糖尿病等）\n2. 手术史\n3. 住院史\n\n您也可以点击下方的「上传医疗文档」按钮，上传病历或体检报告，系统会自动提取信息。",
+      "meta_agent": "medical_examiner",
+      "http_status": 200,
+      "duration_s": 4.3,
+      "extra": {
+        "missing_numbers": [],
+        "matched_numbers": [
+          "高血压"
+        ],
+        "number_mode": "all",
+        "page_ok": false,
+        "numbers": [
+          "高血压"
+        ],
+        "page": 1
+      }
+    },
+    {
+      "id": "B6",
+      "class": "B",
+      "input": "我的主诉是什么",
+      "expected": "数值 口干 或 多饮 + 第 1 页",
+      "passed": false,
+      "reasons": [
+        "缺少 口干/多饮 中任一",
+        "缺少页码「第 1 页」"
+      ],
+      "reason": "缺少 口干/多饮 中任一；缺少页码「第 1 页」",
+      "answer_preview": "【体检员】 根据您之前提供的信息，您的主诉是：**头晕**。 请问这个头晕症状持续多长时间了？严重程度如何（轻度/中度/重度）？ 您也可以点击下方的「上传医疗文…",
+      "answer": "【体检员】\n根据您之前提供的信息，您的主诉是：**头晕**。\n\n请问这个头晕症状持续多长时间了？严重程度如何（轻度/中度/重度）？\n\n您也可以点击下方的「上传医疗文档」按钮，上传病历或体检报告，系统会自动提取更详细的信息。",
+      "meta_agent": "medical_examiner",
+      "http_status": 200,
+      "duration_s": 3.85,
+      "extra": {
+        "missing_numbers": [
+          "口干",
+          "多饮"
+        ],
+        "matched_numbers": [],
+        "number_mode": "any",
+        "page_ok": false,
+        "numbers": [
+          "口干",
+          "多饮"
+        ],
+        "page": 1
+      }
+    },
+    {
+      "id": "B7",
+      "class": "B",
+      "input": "报告结论是什么",
+      "expected": "数值 血糖偏高 或 复查 + 第 2 页",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "【主治医生】 根据体检报告，结论为：**血糖偏高，建议复查糖化血红蛋白**（依据《eval_report.pdf》第 2 页）。 结合您的空腹血糖 6.2 mm…",
+      "answer": "【主治医生】\n根据体检报告，结论为：**血糖偏高，建议复查糖化血红蛋白**（依据《eval_report.pdf》第 2 页）。\n\n结合您的空腹血糖 6.2 mmol/L 及口干、多饮症状，需进一步排查糖尿病或糖尿病前期可能。",
+      "meta_agent": "attending_doctor",
+      "http_status": 200,
+      "duration_s": 4.7,
+      "extra": {
+        "missing_numbers": [],
+        "matched_numbers": [
+          "血糖偏高",
+          "复查"
+        ],
+        "number_mode": "any",
+        "page_ok": true,
+        "numbers": [
+          "血糖偏高",
+          "复查"
+        ],
+        "page": 2
+      }
+    },
+    {
+      "id": "B8",
+      "class": "B",
+      "input": "我的姓名是什么",
+      "expected": "数值 张三 + 第 1 页",
+      "passed": false,
+      "reasons": [
+        "缺少 张三",
+        "缺少页码「第 1 页」"
+      ],
+      "reason": "缺少 张三；缺少页码「第 1 页」",
+      "answer_preview": "【体检员】 我目前没有记录您的姓名信息。 为了完善您的健康档案，可以告诉我您的姓名吗？您也可以点击下方的「上传医疗文档」按钮，上传病历或体检报告，系统会自动提取…",
+      "answer": "【体检员】\n我目前没有记录您的姓名信息。\n\n为了完善您的健康档案，可以告诉我您的姓名吗？您也可以点击下方的「上传医疗文档」按钮，上传病历或体检报告，系统会自动提取信息。",
+      "meta_agent": "medical_examiner",
+      "http_status": 200,
+      "duration_s": 3.66,
+      "extra": {
+        "missing_numbers": [
+          "张三"
+        ],
+        "matched_numbers": [],
+        "number_mode": "all",
+        "page_ok": false,
+        "numbers": [
+          "张三"
+        ],
+        "page": 1
+      }
+    },
+    {
+      "id": "C1",
+      "class": "C",
+      "input": "感冒了能吃什么",
+      "expected": "不含 6.2/13.7/58/88/张三",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "感冒用药和饮食建议需要医生或药师根据您的具体情况来指导，我这边主要是帮您收集健康信息。 请问您： 1. 主要症状是什么？（如发烧、咳嗽、流鼻涕等） 2. 症状持…",
+      "answer": "感冒用药和饮食建议需要医生或药师根据您的具体情况来指导，我这边主要是帮您收集健康信息。\n\n请问您：\n1. 主要症状是什么？（如发烧、咳嗽、流鼻涕等）\n2. 症状持续多久了？\n\n您也可以点击下方的「上传医疗文档」按钮，上传病历或体检报告，系统会自动提取信息。",
+      "meta_agent": "medical_examiner",
+      "http_status": 200,
+      "duration_s": 4.6,
+      "extra": {
+        "blacklist_hits": []
+      }
+    },
+    {
+      "id": "C2",
+      "class": "C",
+      "input": "今天天气怎么样",
+      "expected": "不含 6.2/13.7/58/88/张三",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "您好！我是您的私人医疗顾问。 关于天气情况，建议您查看当地天气预报应用获取准确信息。 请问今天有什么健康方面的需求吗？我注意到您之前提到过头晕的症状，是想继续咨…",
+      "answer": "您好！我是您的私人医疗顾问。\n\n关于天气情况，建议您查看当地天气预报应用获取准确信息。\n\n请问今天有什么健康方面的需求吗？我注意到您之前提到过头晕的症状，是想继续咨询这个问题，还是有其他就诊需求？",
+      "meta_agent": "supervisor",
+      "http_status": 200,
+      "duration_s": 3.92,
+      "extra": {
+        "blacklist_hits": []
+      }
+    },
+    {
+      "id": "C3",
+      "class": "C",
+      "input": "推荐一部电影",
+      "expected": "不含 6.2/13.7/58/88/张三",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "您好！我是您的私人医疗顾问，主要负责医疗健康方面的导诊和协调服务，电影推荐不在我的职责范围内呢。 不过我注意到您之前提到有头晕的症状，请问您今天是因为头晕想要咨…",
+      "answer": "您好！我是您的私人医疗顾问，主要负责医疗健康方面的导诊和协调服务，电影推荐不在我的职责范围内呢。\n\n不过我注意到您之前提到有头晕的症状，请问您今天是因为头晕想要咨询就诊，还是有其他健康方面的需求呢？",
+      "meta_agent": "supervisor",
+      "http_status": 200,
+      "duration_s": 3.8,
+      "extra": {
+        "blacklist_hits": []
+      }
+    },
+    {
+      "id": "C4",
+      "class": "C",
+      "input": "怎么减肥比较健康",
+      "expected": "不含 6.2/13.7/58/88/张三",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "您好！我是您的私人医疗顾问。很高兴为您提供健康指导。 关于健康减肥，我需要先了解一些基本情况： 1. 您目前的身高、体重是多少？ 2. 是否有基础疾病（如高血压…",
+      "answer": "您好！我是您的私人医疗顾问。很高兴为您提供健康指导。\n\n关于健康减肥，我需要先了解一些基本情况：\n\n1. 您目前的身高、体重是多少？\n2. 是否有基础疾病（如高血压、糖尿病等）或正在服用的药物？\n\n了解这些信息后，我会为您转接专业的营养师或医生，为您制定个性化的健康减重方案。",
+      "meta_agent": "supervisor",
+      "http_status": 200,
+      "duration_s": 5.18,
+      "extra": {
+        "blacklist_hits": []
+      }
+    },
+    {
+      "id": "C5",
+      "class": "C",
+      "input": "阿司匹林有什么副作用",
+      "expected": "不含 6.2/13.7/58/88/张三",
+      "passed": false,
+      "reasons": [
+        "命中禁用值「58」"
+      ],
+      "reason": "命中禁用值「58」",
+      "answer_preview": "联网检索暂时不可用，请基于已知医学知识回答**阿司匹林常见副作用：** 1. **胃肠道反应**：胃痛、恶心、反酸，严重可致胃溃疡、消化道出血 2. **出血风…",
+      "answer": "联网检索暂时不可用，请基于已知医学知识回答**阿司匹林常见副作用：**\n\n1. **胃肠道反应**：胃痛、恶心、反酸，严重可致胃溃疡、消化道出血\n2. **出血风险**：牙龈出血、鼻出血、皮下瘀斑，增加手术出血风险\n3. **过敏反应**：皮疹、哮喘（阿司匹林哮喘），呼吸困难\n4. **肝功能影响**：大剂量长期使用可致转氨酶升高\n5. **肾功能影响**：长期大剂量可能损害肾功能\n6. **其他**：头晕、耳鸣（过量时）\n\n**禁忌症：**\n- 活动性消化道溃疡/出血\n- 对阿司匹林或水杨酸类药物过敏\n- 严重肝肾功能不全\n- 血友病等出血性疾病\n- 妊娠晚期\n\n**特别提醒（根据您的病历）：**\n- 您ALT 58 U/L轻度升高，建议用药前复查肝功能（依据《eval_report.pdf》第2页）\n- 有高血压病史，如同时服用降压药，需监测血压\n- 青霉素过敏者不一定对阿司匹林过敏，但首次服用需观察有无过敏反应\n\n**用药前请确认：**\n- 是否有胃病史（胃炎、胃溃疡）？\n- 是否有出血倾向或正在服用抗凝药？\n- 是否对阿司匹林曾有过不良反应？\n\n如有上述情况，需调整用药方案或选择替代药物。",
+      "meta_agent": "pharmacist",
+      "http_status": 200,
+      "duration_s": 19.04,
+      "extra": {
+        "blacklist_hits": [
+          "58"
+        ]
+      }
+    },
+    {
+      "id": "C6",
+      "class": "C",
+      "input": "我昨晚没睡好怎么办",
+      "expected": "不含 6.2/13.7/58/88/张三",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "已保存症状描述: 昨晚没睡好...昨晚没睡好确实会影响身体状态。为了更好地为您评估，请问： 1. 您叫什么名字？今年多大年纪？ 2. 这种睡眠不好是偶尔发生还是…",
+      "answer": "已保存症状描述: 昨晚没睡好...昨晚没睡好确实会影响身体状态。为了更好地为您评估，请问：\n\n1. 您叫什么名字？今年多大年纪？\n2. 这种睡眠不好是偶尔发生还是经常这样？有没有什么诱因？\n\n您也可以点击下方的「上传医疗文档」按钮，上传病历或体检报告，系统会自动提取信息。",
+      "meta_agent": "medical_examiner",
+      "http_status": 200,
+      "duration_s": 8.98,
+      "extra": {
+        "blacklist_hits": []
+      }
+    },
+    {
+      "id": "D1",
+      "class": "D",
+      "input": "我的血糖是多少",
+      "expected": "不含 6.2/13.7/58/88/张三 + 含无数据表述",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "目前我无法直接获取您的血糖检测数据。请您提供以下信息以便我进行诊断： 1. 空腹血糖值（mmol/L） 2. 餐后2小时血糖值（如有） 3. 糖化血红蛋白（Hb…",
+      "answer": "目前我无法直接获取您的血糖检测数据。请您提供以下信息以便我进行诊断：\n\n1. 空腹血糖值（mmol/L）\n2. 餐后2小时血糖值（如有）\n3. 糖化血红蛋白（HbA1c）结果（如有）\n4. 检测时间及检测机构\n\n请提供体检报告中的相关数据，我将据此给出诊断和治疗方案。",
+      "meta_agent": "attending_doctor",
+      "http_status": 200,
+      "duration_s": 6.3,
+      "extra": {
+        "blacklist_hits": [],
+        "no_data_phrase": "无法"
+      }
+    },
+    {
+      "id": "D2",
+      "class": "D",
+      "input": "我的血红蛋白是多少",
+      "expected": "不含 6.2/13.7/58/88/张三 + 含无数据表述",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "我无法直接查看您的体检报告数据。血红蛋白数值需要查看您的体检报告单，建议您： 1. 查看体检报告中的\"血常规\"项目 2. 或咨询为您收集信息的体检员 拿到具体数…",
+      "answer": "我无法直接查看您的体检报告数据。血红蛋白数值需要查看您的体检报告单，建议您：\n\n1. 查看体检报告中的\"血常规\"项目\n2. 或咨询为您收集信息的体检员\n\n拿到具体数值后，我可以帮您判断是否异常并给出相应诊疗建议。",
+      "meta_agent": "attending_doctor",
+      "http_status": 200,
+      "duration_s": 4.96,
+      "extra": {
+        "blacklist_hits": [],
+        "no_data_phrase": "无法"
+      }
+    },
+    {
+      "id": "D3",
+      "class": "D",
+      "input": "我上次体检结果怎么样",
+      "expected": "不含 6.2/13.7/58/88/张三 + 含无数据表述",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "目前我没有收到您的体检报告或相关检查数据。作为主治医生，我需要体检员收集的症状信息和检查报告才能进行诊断和制定治疗方案。 请您联系体检员提供以下资料： - 体格…",
+      "answer": "目前我没有收到您的体检报告或相关检查数据。作为主治医生，我需要体检员收集的症状信息和检查报告才能进行诊断和制定治疗方案。\n\n请您联系体检员提供以下资料：\n- 体格检查结果\n- 实验室检查报告（血常规、生化等）\n- 影像学检查结果\n- 既往病史和过敏史\n\n收到完整资料后，我会为您进行诊断并制定治疗方案。",
+      "meta_agent": "attending_doctor",
+      "http_status": 200,
+      "duration_s": 4.82,
+      "extra": {
+        "blacklist_hits": [],
+        "no_data_phrase": "没有"
+      }
+    },
+    {
+      "id": "E1",
+      "class": "E",
+      "input": "B 用自己 token GET A 的会话",
+      "expected": "404",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "{\"detail\":\"会话不存在\"}",
+      "answer": "{\"detail\":\"会话不存在\"}",
+      "meta_agent": null,
+      "http_status": 404,
+      "duration_s": 0.03,
+      "extra": {
+        "operation": "B 用自己 token GET A 的会话"
+      }
+    },
+    {
+      "id": "E2",
+      "class": "E",
+      "input": "B 用自己 token DELETE A 的会话",
+      "expected": "404",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "{\"detail\":\"会话不存在\"}",
+      "answer": "{\"detail\":\"会话不存在\"}",
+      "meta_agent": null,
+      "http_status": 404,
+      "duration_s": 0.03,
+      "extra": {
+        "operation": "B 用自己 token DELETE A 的会话"
+      }
+    },
+    {
+      "id": "E3",
+      "class": "E",
+      "input": "B 用自己 token 请求 /chat/stream 且 user_id 填 A 的",
+      "expected": "403 或 SSE error",
+      "passed": true,
+      "reasons": [],
+      "reason": "",
+      "answer_preview": "HTTP 403: {\"detail\":\"无权访问其他用户的数据\"}",
+      "answer": "HTTP 403: {\"detail\":\"无权访问其他用户的数据\"}",
+      "meta_agent": null,
+      "http_status": 403,
+      "duration_s": 0.02,
+      "extra": {
+        "operation": "B 用自己 token 请求 /chat/stream 且 user_id 填 A 的",
+        "sse_error": "HTTP 403: {\"detail\":\"无权访问其他用户的数据\"}"
+      }
+    }
+  ],
+  "cleanup": {
+    "counts": {
+      "users": 2,
+      "conversations": 1,
+      "documents": 0,
+      "checkpoints_rows": 394,
+      "store_rows": 12,
+      "chroma": 0,
+      "uploads": 0
+    },
+    "verification": {
+      "users": {
+        "eval": 0,
+        "global": 0
+      },
+      "conversations": {
+        "eval": 0,
+        "global": 0
+      },
+      "medical_documents": {
+        "eval": 0,
+        "global": 0
+      },
+      "checkpoint_rows": 0,
+      "store_rows": 0,
+      "chroma": {
+        "eval": 1,
+        "global": 3
+      },
+      "uploads": {
+        "eval": 0,
+        "global": 0
+      }
+    },
+    "residual": [
+      "chroma:D:\\smart-medical-assistant\\backend\\storage\\chroma\\user_48_b33967ad73"
+    ],
+    "errors": [
+      "删除目录 D:\\smart-medical-assistant\\backend\\storage\\chroma\\user_48_b33967ad73 失败: [WinError 32] 另一个程序正在使用此文件，进程无法访问。: 'D:\\\\smart-medical-assistant\\\\backend\\\\storage\\\\chroma\\\\user_48_b33967ad73\\\\c7bbc680-88a2-409b-84ca-d7203bd155dc\\\\data_level0.bin'（若为 WinError 32，通常是后端进程仍持有 Chroma 文件，需重启后端后清理）"
+    ]
+  },
+  "console_table": "=== 评测结果 2026-10-19 17:05 ===\nA 路由正确性    5/5   100.0%\nB 检索问答     4/8    50.0%   ← B4 缺少 45；缺少页码「第 1 页」；B5 缺少页码「第 1 页」；B6 缺少 口干/多饮 中任一；缺少页码「第 1 页」；B8 缺少 张三；缺少页码「第 1 页」\nC 无关不硬扯    5/6    83.3%   ← C5 命中禁用值「58」\nD 兜底不幻觉    3/3   100.0%\nE 越权拦截     3/3   100.0%\n------------------------------------\n合计             20/25    80.0%   耗时 2m16s",
+  "notes": [
+    "B 类用 index_pages 直接灌索引，未覆盖上传→PDF 解析→索引链路。",
+    "判据为字符串包含/边界正则，不使用 LLM 裁判。",
+    "D 类回答原文已全部写入 JSON，需人工复核是否编造了黑名单外的数值。"
+  ]
+}

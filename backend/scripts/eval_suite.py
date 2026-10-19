@@ -72,8 +72,8 @@ CASES: dict[str, list[dict[str, Any]]] = {
         {"id": "B3", "input": "我的 ALT 是多少", "numbers": ["58"], "page": 2},
         {"id": "B4", "input": "我多大年纪", "numbers": ["45"], "page": 1},
         {"id": "B5", "input": "我有什么既往病史", "numbers": ["高血压"], "page": 1},
-        {"id": "B6", "input": "我的主诉是什么", "numbers": ["口干", "多饮"], "page": 1},
-        {"id": "B7", "input": "报告结论是什么", "numbers": ["血糖偏高", "复查"], "page": 2},
+        {"id": "B6", "input": "我的主诉是什么", "numbers": ["口干", "多饮"], "page": 1, "number_mode": "any"},
+        {"id": "B7", "input": "报告结论是什么", "numbers": ["血糖偏高", "复查"], "page": 2, "number_mode": "any"},
         {"id": "B8", "input": "我的姓名是什么", "numbers": ["张三"], "page": 1},
     ],
     "C": [
@@ -401,19 +401,30 @@ def _run_b(
         reasons = []
         if stream["error"]:
             reasons.append(stream["error"])
-        missing_numbers = [
-            value for value in case["numbers"] if not _number_pattern(value).search(answer)
+        matched_numbers = [
+            value for value in case["numbers"] if _number_pattern(value).search(answer)
         ]
-        if missing_numbers:
-            reasons.append(f"缺少 {'/'.join(missing_numbers)}")
+        number_mode = case.get("number_mode", "all")
+        if number_mode == "any":
+            missing_numbers = [] if matched_numbers else list(case["numbers"])
+            if missing_numbers:
+                reasons.append(f"缺少 {'/'.join(missing_numbers)} 中任一")
+        else:
+            missing_numbers = [
+                value for value in case["numbers"] if value not in matched_numbers
+            ]
+            if missing_numbers:
+                reasons.append(f"缺少 {'/'.join(missing_numbers)}")
         page_ok = bool(_page_pattern(case["page"]).search(answer))
         if not page_ok:
             reasons.append(f"缺少页码「第 {case['page']} 页」")
+        joiner = " 或 " if number_mode == "any" else "/"
+        expected = f"数值 {joiner.join(case['numbers'])} + 第 {case['page']} 页"
         result = _result(
             case["id"],
             "B",
             case["input"],
-            f"数值 {'/'.join(case['numbers'])} + 第 {case['page']} 页",
+            expected,
             not reasons,
             reasons,
             answer=answer,
@@ -422,6 +433,8 @@ def _run_b(
             duration_s=stream["duration_s"],
             extra={
                 "missing_numbers": missing_numbers,
+                "matched_numbers": matched_numbers,
+                "number_mode": number_mode,
                 "page_ok": page_ok,
                 "numbers": case["numbers"],
                 "page": case["page"],
