@@ -18,6 +18,8 @@ class Settings:
     # AI 模型配置
     DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY", "")
     TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
+    # DeepSeek Search API（可选替代 Tavily，见 .env 注释）
+    DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
     
     # LangSmith 配置
     LANGCHAIN_TRACING_V2 = os.getenv("LANGCHAIN_TRACING_V2", "true").lower() == "true"
