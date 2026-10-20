@@ -9,7 +9,7 @@
 
 import uuid
 
-from langchain_core.messages import AIMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from app.agents.base import get_model, get_deepseek_model
 from langchain.agents import create_agent
@@ -25,8 +25,7 @@ from app.agents.tools import search_web, save_medical_info
 
 
 # 药师提示词
-PHARMACIST_PROMPT = """
-【角色定义】
+PHARMACIST_PROMPT = """【角色定义】
 你是药师，只负责药品和用药相关问题。
 
 【输出硬约束】（优先级最高，与下方任何规则冲突时以此为准）
@@ -65,6 +64,48 @@ PHARMACIST_PROMPT = """
 简明扼要，像药房窗口的药师。
 **必须使用简体中文回答**，即使检索资料、药品名、文献是英文或其他语言，也要译成中文后再表述。
 """
+
+
+# ---------- 后处理：拦截"照抄资料"的回答 ----------
+# 背景：药师节点接 search_web 后，模型对政策型内容（如"今年有什么流感疫苗"）倾向把工具返回的
+# 列表原样贴进回答，实测 414–474 字且带 "- " 前缀。事实型问题（如副作用）模型会正常重写。
+# prompt 层已加硬约束与正反示范，对该类问题无效，所以在节点出口做一次兜底重写。
+REWRITE_CHAR_LIMIT = 200
+PASTE_SYMBOLS = ("●", "・", "▪", "■", "◆", "▶", "※")
+
+
+def _looks_like_pasted(answer: str) -> bool:
+    """判断回答是否在照抄检索资料。"""
+    text = (answer or "").strip()
+    if not text:
+        return False
+    if len(text) > REWRITE_CHAR_LIMIT:
+        return True
+    if text.startswith("-") or text.startswith("【不良反应】"):
+        return True
+    return any(sym in text for sym in PASTE_SYMBOLS)
+
+
+def _compress_answer(model, question: str, answer: str) -> str:
+    """把过长或照抄的回答重写成 120 字内。失败或没变好时返回空串，由调用方保留原回答。"""
+    try:
+        resp = model.invoke([
+            SystemMessage(content=(
+                "你是药师。下面这段回答太长，或者是直接从资料里抄来的。请用你自己的话重写。\n"
+                "要求：不超过 120 字；只讲最关键的 2-3 点；不要用 ● ・ - 等符号；"
+                "不要复述原文；保留禁忌提醒；结尾可以问一句是否需要进一步说明。\n"
+                "只输出重写后的内容，不要解释你在做什么。"
+            )),
+            HumanMessage(content=f"用户问题：{question}\n\n需要重写的回答：\n{answer[:1500]}"),
+        ])
+        text = (resp.content or "").strip()
+        # 没变短就放弃，避免二次调用反而把回答改坏
+        if not text or len(text) >= len(answer):
+            return ""
+        return text
+    except Exception:
+        return ""
+
 
 
 # 药师节点：药品咨询、用药指导、药物副作用、药品替代
@@ -120,6 +161,17 @@ def pharmacist_node(state: MedicalAgentState):
             last_msg = response_messages[-1]
             # 如果是 AI 消息
             if isinstance(last_msg, AIMessage):
+                # 后处理：回答像照抄检索资料时，重写一次（只对超标回答触发，正常回答无额外开销）
+                if _looks_like_pasted(last_msg.content):
+                    question = ""
+                    for m in reversed(messages):
+                        if isinstance(m, HumanMessage):
+                            question = m.content if isinstance(m.content, str) else str(m.content)
+                            break
+                    rewritten = _compress_answer(model, question, last_msg.content)
+                    if rewritten:
+                        print(f"[药师后处理] 原回答 {len(last_msg.content)} 字 -> 重写为 {len(rewritten)} 字")
+                        last_msg.content = rewritten
                 # 如果还没有角色前缀，添加【药师】
                 if not last_msg.content.startswith("【药师】"):
                     last_msg.content = "【药师】\n" + last_msg.content
