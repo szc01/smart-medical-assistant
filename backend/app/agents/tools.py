@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 # 主路径：DeepSeek 自研搜索（0.5-0.8s，中文为主，summary 是给模型读的摘要）
 # 降级路径：Tavily（海外源，正文较长且常夹英文）
 SEARCH_MAX_RESULTS = 3
-SEARCH_SUMMARY_MAX_CHARS = 400   # DeepSeek：每条 summary 上限（实测原始 482-1442 字，不压会 3 条 1600+）
+SEARCH_SNIPPET_MAX_CHARS = 200   # DeepSeek：每条 snippet 上限（原始 100-200 字，短而聚焦）
+SEARCH_SUMMARY_MAX_CHARS = 400   # DeepSeek 降级：summary 原始 482-1442 字，不压会 3 条 1600+
 SEARCH_MAX_CHARS = 300           # Tavily：每条正文上限
 SEARCH_ANSWER_MAX_CHARS = 500    # Tavily：answer 摘要上限
 SEARCH_MIN_SCORE = 1.5           # DeepSeek rerank_score 阈值（文档口径：≥1.5 为优质结果）
@@ -56,6 +57,36 @@ def _is_chinese_text(text: str, threshold: float = 0.2) -> bool:
         return False
     cn = len(re.findall(r"[\u4e00-\u9fff]", text))
     return cn / len(text) >= threshold
+
+
+def _clean_summary(text: str) -> str:
+    """清洗 DeepSeek summary 里的网页噪声。
+
+    summary 是网页正文的 Markdown 提取结果，实测包含这些模型会照抄的内容：
+      "| 发布日期：2022-06-14 11:09:31 来源：中华医学会科学普及部"
+      "2017-08-27 11:56:00来源：北京青年报"
+      "作者：刘玉和 北京大学第一医院 主任医师" / "审核：郭树彬 ..."
+      "\\n...\\n" 省略号分隔、Markdown 标题 "## "
+    不清洗的话，模型回答会以 "- | 发布日期：..." 开头（实测发生过）。
+    """
+    if not text:
+        return ""
+    t = text
+    t = re.sub(r"^\s*\|?\s*发布日期[:：][^\n]*\n?", "", t)
+    t = re.sub(r"^\s*\d{4}[-/]\d{1,2}[-/]\d{1,2}[^\n]{0,12}来源[:：][^\n]*\n?", "", t)
+    t = re.sub(r"^\s*时间[:：][^\n]*\n?", "", t)
+    t = re.sub(r"\n\s*\.{3,}\s*\n", "\n", t)
+    t = re.sub(r"^\s*#{1,6}\s*", "", t, flags=re.M)
+    t = re.sub(r"\n\s*(作者|审核|编辑|责编|来源)[:：][^\n]*", "", t)
+    # 中文日期时间戳 + "| 来源：xxx"（实测 "2026年10月19日07:48 | 来源：科技日报"）
+    t = re.sub(r"\d{4}年\d{1,2}月\d{1,2}日\s*\d{1,2}:\d{2}[^\n]{0,24}", "", t)
+    t = re.sub(r"\d{4}[-/]\d{1,2}[-/]\d{1,2}\s+\d{1,2}:\d{2}(:\d{2})?[^\n]{0,24}", "", t)
+    t = re.sub(r"[|｜]\s*来源[:：][^\n]{0,24}", "", t)
+    # 行首残留的省略号
+    t = re.sub(r"^\s*[.．]{2,}\s*", "", t)
+    # 段内换行压成空格：保留换行会让模型照着分点复述
+    t = re.sub(r"\s*\n\s*", " ", t)
+    return re.sub(r"\s{2,}", " ", t).strip()
 
 
 def _search_deepseek(query: str) -> str:
@@ -90,14 +121,20 @@ def _search_deepseek(query: str) -> str:
     # 只用重排分达标的条目：低分结果通常是标题党或弱相关内容
     items = [it for it in items if (it.get("rerank_score") or 0) >= SEARCH_MIN_SCORE]
 
-    snippets = [
-        _clip(it.get("summary") or it.get("snippet") or "", SEARCH_SUMMARY_MAX_CHARS)
-        for it in items
-    ]
-    snippets = [s for s in snippets if s]
-    if not snippets:
-        return "未找到相关信息"
-    return "\n".join(f"- {s}" for s in snippets)
+    # 只用中文资料：实测搜「阿司匹林有什么副作用」会命中瑞典药典页面（Sällsynta / Mycket sällsynta），
+    # 模型会照着抄一整段瑞典语，导致回答中文占比掉到 47%。工具层必须先把外文滤掉。
+    cleaned = []
+    for it in items:
+        text = _clean_summary(it.get("snippet") or "") or _clean_summary(it.get("summary") or "")
+        if not _is_chinese_text(text):
+            continue
+        snippet = _clip(text, SEARCH_SNIPPET_MAX_CHARS) if it.get("snippet") else _clip(text, SEARCH_SUMMARY_MAX_CHARS)
+        if snippet:
+            cleaned.append(snippet)
+
+    if not cleaned:
+        return "未找到可靠的中文资料，建议告知用户咨询专业医疗机构或查阅官方指南"
+    return "\n".join(f"- {s}" for s in cleaned)
 
 
 def _search_tavily(query: str) -> str:
