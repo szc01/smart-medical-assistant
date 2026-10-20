@@ -15,3 +15,25 @@ def get_model(disable_thinking: bool = False):
         temperature=0.3,  # 控制输出的随机性，0.3 表示相对保守
         **({"extra_body": extra} if extra else {}),
     )
+
+
+def get_deepseek_model():
+    """DeepSeek 模型，目前只给药师节点用。
+
+    原因：药师的回答需要严格控长、且不能照抄检索资料。同样的 prompt 与同一份检索结果，
+    qwen3.5-plus 输出 366 字并抄下网页符号，deepseek-chat 输出 88 字且完整达标
+    （含副作用、风险提示、主动追问），耗时 1.4s vs 约 6s。
+
+    DEEPSEEK_API_KEY 未配置时回退到 qwen，避免药师节点整条链路不可用。
+    """
+    if not settings.DEEPSEEK_API_KEY:
+        return get_model()
+    return ChatOpenAI(
+        model="deepseek-chat",
+        api_key=settings.DEEPSEEK_API_KEY,
+        base_url="https://api.deepseek.com",
+        # temperature=0：药师的输出要的是稳定复现，不是多样性。
+        # 实测 0.3 时同一问题会出现 87 字（达标）与 496 字（照抄资料）两种结果。
+        temperature=0,
+        timeout=60,
+    )

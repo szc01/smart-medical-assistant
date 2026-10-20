@@ -11,7 +11,7 @@ import uuid
 
 from langchain_core.messages import AIMessage, SystemMessage
 
-from app.agents.base import get_model
+from app.agents.base import get_model, get_deepseek_model
 from langchain.agents import create_agent
 from langgraph.config import get_stream_writer
 
@@ -75,8 +75,9 @@ def pharmacist_node(state: MedicalAgentState):
     except Exception:
         pass
     try:
-        # 获取聊天模型实例
-        model = get_model()
+        # 药师用 DeepSeek：同 prompt 同资料下，qwen3.5-plus 会复述检索原文（366 字），
+        # deepseek-chat 能压到 88 字并保留禁忌提醒与追问。Key 缺失时自动回退 qwen。
+        model = get_deepseek_model()
         # 从状态中获取消息列表
         messages = state["messages"]
         # 从状态中获取用户ID
