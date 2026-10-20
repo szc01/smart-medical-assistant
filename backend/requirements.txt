@@ -54,3 +54,4 @@ tavily-python==0.5.0
 
 # 工具
 python-dotenv==1.0.1
+requests==2.34.2
