@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 # 降级路径：Tavily（海外源，正文较长且常夹英文）
 SEARCH_MAX_RESULTS = 3
 SEARCH_SNIPPET_MAX_CHARS = 200   # DeepSeek：每条 snippet 上限（原始 100-200 字，短而聚焦）
+                                 # 曾压到 120 试图削弱"照抄"，实测无效：模型会扩写而非照抄输入长度，已回滚
 SEARCH_SUMMARY_MAX_CHARS = 400   # DeepSeek 降级：summary 原始 482-1442 字，不压会 3 条 1600+
 SEARCH_MAX_CHARS = 300           # Tavily：每条正文上限
 SEARCH_ANSWER_MAX_CHARS = 500    # Tavily：answer 摘要上限
