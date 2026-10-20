@@ -76,7 +76,7 @@ const loadConversations = async () => {
       const convs = response.data.conversations
       conversations.value = convs.map((conv: any) => ({
         ...conv,
-        lastActive: new Date(conv.lastActive),
+        lastActive: new Date(conv.last_active),
         created_at: new Date(conv.created_at),
         messages: []
       }))
