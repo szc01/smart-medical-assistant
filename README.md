@@ -36,7 +36,7 @@
 | 会话管理   | 新建 / 列表 / 详情 / 删除，会话与消息记录落 PostgreSQL                       |
 | 用户体系   | 注册、登录、bcrypt 密码哈希、JWT 鉴权，路由级登录守卫                            |
 | 偏好设置   | 回答风格、过敏史等偏好写入长记忆，与对话流程共用同一份存储                               |
-| 联网检索   | 通过 Tavily 为智能体提供实时信息检索工具                                    |
+| 联网检索   | 通过 DeepSeek Search 为智能体提供实时信息检索（Tavily 作为降级备选）        |
 | 流式响应   | `/chat/stream` 走 SSE，token 级增量返回；首 token 延迟 3–5 s（路由关闭 thinking 后从 12–16 s 降下来） |
 
 ## 效果（自建评测集）
@@ -110,7 +110,7 @@ POST /chat/stream
 
 **后端**：Python 3.12 · FastAPI · LangGraph 1.0 · LangChain 1.0 · SQLAlchemy 2.0 · PostgreSQL（长期记忆 / 会话 / 医疗文档）· MySQL（用户账号）· Pydantic 2 · python-jose + bcrypt  
 **前端**：Vue 3.5（Composition API）· TypeScript · Vite 6 · Element Plus · Pinia · Vue Router 4 · Axios · marked  
-**模型与外部服务**：阿里云百炼（DashScope，OpenAI 兼容端点，默认 `qwen3.5-plus`）· Tavily 联网检索 · LangSmith 追踪（可选）
+**模型与外部服务**：阿里云百炼（DashScope，OpenAI 兼容端点，默认 `qwen3.5-plus`）· DeepSeek Search 联网检索（Tavily 降级）· LangSmith 追踪（可选）
 
 ## 目录结构
 
@@ -253,7 +253,8 @@ npm run dev
 | 变量                                           | 必填 | 说明                                              |
 | -------------------------------------------- | -- | ----------------------------------------------- |
 | `DASHSCOPE_API_KEY`                          | ✅  | 阿里云百炼 Key，用于对话与 PDF 抽取                          |
-| `TAVILY_API_KEY`                             | ⬜  | 联网检索工具，缺失时搜索工具报错但不影响主流程                         |
+| `DEEPSEEK_API_KEY`                           | ⬜  | DeepSeek Search 主检索源，缺失时自动降级到 Tavily                        |
+| `TAVILY_API_KEY`                             | ⬜  | 联网检索降级备选，缺失时搜索工具报错但不影响主流程                       |
 | `DATABASE_URL`                               | ✅  | MySQL DSN，前缀必须是 `mysql+mysqlconnector://`       |
 | `POSTGRES_SHORT_TERM_URL`                    | ✅  | 短记忆库，前缀必须是 `postgresql://`（走 psycopg_pool）      |
 | `POSTGRES_LONG_TERM_URL`                     | ✅  | 长记忆库，同上                                         |

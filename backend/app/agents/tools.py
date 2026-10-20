@@ -14,20 +14,23 @@ from app.agents.memory import get_long_term_memory
 import json
 import logging
 import re
+import time
 import uuid
+import requests
 
 
 logger = logging.getLogger(__name__)
 
 
-# 初始化 Tavily 客户端（联网搜索工具）
-tavily = TavilyClient(api_key=settings.TAVILY_API_KEY)
-
-# Tavily 返回的是网页正文，单条常有一两千字。整段塞给模型会被原样复述（实测回答从 400 字涨到 4500 字），
-# 所以在工具层就压缩——从源头控制输入体量，比在 prompt 里要求"精简"可靠。
+# 联网检索配置
+# 主路径：DeepSeek 自研搜索（0.5-0.8s，中文为主，summary 是给模型读的摘要）
+# 降级路径：Tavily（海外源，正文较长且常夹英文）
 SEARCH_MAX_RESULTS = 3
-SEARCH_MAX_CHARS = 300        # 降级路径：每条正文的上限
-SEARCH_ANSWER_MAX_CHARS = 500  # 优先路径：Tavily 生成的摘要上限
+SEARCH_SUMMARY_MAX_CHARS = 400   # DeepSeek：每条 summary 上限（实测原始 482-1442 字，不压会 3 条 1600+）
+SEARCH_MAX_CHARS = 300           # Tavily：每条正文上限
+SEARCH_ANSWER_MAX_CHARS = 500    # Tavily：answer 摘要上限
+SEARCH_MIN_SCORE = 1.5           # DeepSeek rerank_score 阈值（文档口径：≥1.5 为优质结果）
+DEEPSEEK_SEARCH_URL = "https://api.deepseek.com/v1/tools/search"
 
 
 def _clip(text: str, limit: int = SEARCH_MAX_CHARS) -> str:
@@ -55,6 +58,78 @@ def _is_chinese_text(text: str, threshold: float = 0.2) -> bool:
     return cn / len(text) >= threshold
 
 
+def _search_deepseek(query: str) -> str:
+    """DeepSeek Search：summary 是面向模型的摘要，中文占比 60-90%，实测 0.5-0.8s。"""
+    # 外部接口偶发 SSL EOF / 连接被重置，重试一次；仍失败则交给上层降级到 Tavily
+    last_err = None
+    for attempt in range(2):
+        try:
+            resp = requests.post(
+                DEEPSEEK_SEARCH_URL,
+                headers={
+                    "Authorization": f"Bearer {settings.DEEPSEEK_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "query": query,
+                    "count": SEARCH_MAX_RESULTS,
+                    "ori_question": query,   # 帮助搜索引擎理解意图
+                },
+                timeout=20,
+            )
+            resp.raise_for_status()
+            break
+        except requests.RequestException as e:
+            last_err = e
+            if attempt == 0:
+                time.sleep(0.5)
+    else:
+        raise last_err
+
+    items = resp.json().get("results", [])
+    # 只用重排分达标的条目：低分结果通常是标题党或弱相关内容
+    items = [it for it in items if (it.get("rerank_score") or 0) >= SEARCH_MIN_SCORE]
+
+    snippets = [
+        _clip(it.get("summary") or it.get("snippet") or "", SEARCH_SUMMARY_MAX_CHARS)
+        for it in items
+    ]
+    snippets = [s for s in snippets if s]
+    if not snippets:
+        return "未找到相关信息"
+    return "\n".join(f"- {s}" for s in snippets)
+
+
+def _search_tavily(query: str) -> str:
+    """Tavily 降级路径：DeepSeek 不可用（欠费 / Key 失效 / 网络）时兜底。"""
+    client = TavilyClient(api_key=settings.TAVILY_API_KEY)
+    result = client.search(
+        query,
+        max_results=SEARCH_MAX_RESULTS,
+        include_answer=True,
+    )
+
+    # 只用中文资料：模型拿到英文原文会整段照抄（实测输出过 "The sources indicate that..."），
+    # 在工具返回值里夹"请用中文"的指令也没用——模型会把指令当资料一起复述。
+    # 所以在这一层就把非中文内容滤掉，让模型根本没有可抄的英文。
+    items = result.get("results", [])[:SEARCH_MAX_RESULTS]
+    cn_snippets = [
+        _clip(item.get("content") or "")
+        for item in items
+        if _is_chinese_text(item.get("content") or "")
+    ]
+    cn_snippets = [s for s in cn_snippets if s]
+    if cn_snippets:
+        return "\n".join(f"- {s}" for s in cn_snippets)
+
+    answer = (result.get("answer") or "").strip()
+    if answer and _is_chinese_text(answer):
+        return _clip(answer, SEARCH_ANSWER_MAX_CHARS)
+
+    # 全是外文资料：宁可说没有，也不要把英文段落丢给中文对话
+    return "未找到可靠的中文资料，建议告知用户咨询专业医疗机构或查阅官方指南"
+
+
 @tool
 def search_web(query: str) -> str:
     """
@@ -62,32 +137,14 @@ def search_web(query: str) -> str:
     参数 query 是搜索关键词
     当用户需要最新信息、新闻、医疗资讯等时使用此工具
     """
+    if settings.DEEPSEEK_API_KEY:
+        try:
+            return _search_deepseek(query)
+        except Exception as e:
+            logger.warning("DeepSeek 检索失败，降级到 Tavily: %s", e)
+
     try:
-        result = tavily.search(
-            query,
-            max_results=SEARCH_MAX_RESULTS,
-            include_answer=True,
-        )
-
-        # 只用中文资料：模型拿到英文原文会整段照抄（实测输出过 "The sources indicate that..."），
-        # 在工具返回值里夹"请用中文"的指令也没用——模型会把指令当资料一起复述。
-        # 所以在这一层就把非中文内容滤掉，让模型根本没有可抄的英文。
-        items = result.get("results", [])[:SEARCH_MAX_RESULTS]
-        cn_snippets = [
-            _clip(item.get("content") or "")
-            for item in items
-            if _is_chinese_text(item.get("content") or "")
-        ]
-        cn_snippets = [s for s in cn_snippets if s]
-        if cn_snippets:
-            return "\n".join(f"- {s}" for s in cn_snippets)
-
-        answer = (result.get("answer") or "").strip()
-        if answer and _is_chinese_text(answer):
-            return _clip(answer, SEARCH_ANSWER_MAX_CHARS)
-
-        # 全是外文资料：宁可说没有，也不要把英文段落丢给中文对话
-        return "未找到可靠的中文资料，建议告知用户咨询专业医疗机构或查阅官方指南"
+        return _search_tavily(query)
     except Exception as e:
         logger.warning("联网检索失败: %s", e)
         return "联网检索暂时不可用，请基于已知医学知识回答"
