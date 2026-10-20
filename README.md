@@ -228,14 +228,15 @@ cd backend && pip install -r requirements-dev.txt && pytest tests/ -q
 
 ### 持续集成
 
-`.github/workflows/ci.yml` 在 push / PR 到 `main` 时触发，包含两个 job：
+`.github/workflows/ci.yml` 在 push / PR 到 `main` 时触发，包含三个 job：
 
-| Job                           | 实际执行内容                                                                                          |
-| ----------------------------- | ----------------------------------------------------------------------------------------------- |
-| `Backend syntax check`        | `python -m compileall -q backend/app backend/main.py`                                           |
+| Job | 实际执行内容 |
+| --- | --- |
+| `Backend syntax check` | `python -m compileall -q backend/app backend/main.py`（不装依赖，几秒出结果） |
+| `Backend tests` | `pip install -r backend/requirements-dev.txt` + `pytest tests/ -q`（18 条单测） |
 | `Frontend type-check & build` | `npm ci` + `npm run build`，其中 `vue-tsc --noEmit -p tsconfig.app.json` 做全量类型检查，再 `vite build` 产出 |
 
-> 后端 pytest 尚未接入 CI（需要在 workflow 里安装 `requirements-dev.txt` 并执行 `pytest tests/ -q`），目前靠本地手动运行。
+> 单测不需要 `.env`：`backend/tests/conftest.py` 会在被测模块 import 之前注入一组格式合法但不会被真正使用的占位环境变量，避免 SQLAlchemy 在解析空连接串时直接抛错。单元测试本身用假 embedding 与 `tmp_path`，不连数据库也不调网络。
 
 ### 第 3 步：启动前端
 
@@ -309,7 +310,7 @@ curl -X POST http://localhost:8000/auth/token \
 - **单轮路由**：子智能体执行完即结束，不做工具调用的多轮自循环（见设计要点 2）。
 - **PDF 仅支持文本层**：扫描件需先 OCR；正文读取上限 8000 字符。
 - **模型强绑定 DashScope**：换模型需改 `app/agents/base.py` 与 `app/rag/document_extractor.py` 的模型名与 endpoint。
-- **自动化测试覆盖有限**：已有 18 条单测（RAG 检索层 7 条，假 embedding，不连网络也不连数据库；体检员转接判断 2 条；流式事件 3 条；药师回答后处理判定 6 条）；前端在 CI 里做 `vue-tsc` 类型检查与生产构建，**后端 pytest 尚未接入 CI**。
+- **自动化测试覆盖有限**：已有 18 条单测（RAG 检索层 7 条，假 embedding，不连网络也不连数据库；体检员转接判断 2 条；流式事件 3 条；药师回答后处理判定 6 条）。后端 pytest 与前端 `vue-tsc` 类型检查都已在 CI 中执行；**尚未覆盖**的是记忆读写、路由决策、PDF 抽取这三块，它们需要 mock LLM 或真实数据库。
 - **检索相似度的区分度有限**：`text-embedding-v3` 在中文短文本上，「相关片段」与「无关片段」的余弦相似度有重叠（实测相关 top1 0.44–0.78、无关 top1 0.40–0.50）。阈值 `0.43` 只能减少误注入，不能完全消除；更彻底的做法是按问题意图门控检索。
 - **旧记忆不回填**：把检查结果从长记忆拆出去的规则只对新写入生效，升级前写入的记录仍混在「医疗信息」里（当前仓库无历史数据，不影响使用）。
 - **流式路径下的政策型问题会夹带检索原文**：问「今年有什么流感疫苗」这类政策型问题时，模型倾向于把检索引擎返回的列表直接拼进回答（实测 400+ 字，带 `-` 前缀与网页符号）；问副作用这类事实型问题则表现正常（85–110 字）。`/chat/send` 已做后处理——检测到照抄后二次调用模型重写（417 字 → 113 字），但 `/chat/stream` **做不了**：流式下 token 边生成边推送，节点拿到完整回答时前端已经显示完了。彻底解决需要改伪流式（攒完再分段推），代价是首 token 从 3–5 s 退回 10 s 以上，因此未做。
